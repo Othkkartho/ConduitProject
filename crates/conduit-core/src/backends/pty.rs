@@ -2,13 +2,14 @@ use crate::backend::{SessionBackend, SessionError};
 use async_trait::async_trait;
 use bytes::Bytes;
 use conduit_protocol::TerminalSize;
-use portable_pty::{native_pty_system, CommandBuilder, MasterPty, PtySize};
+use portable_pty::{native_pty_system, ChildKiller, CommandBuilder, MasterPty, PtySize};
 use std::io::{Read, Write};
 use std::sync::Mutex;
 use tokio::sync::mpsc;
 
 pub struct PtyBackend {
     master: Mutex<Box<dyn MasterPty + Send>>,
+    killer: Mutex<Box<dyn ChildKiller + Send + Sync>>,
     input_tx: mpsc::Sender<Bytes>,
 }
 
@@ -50,6 +51,7 @@ impl PtyBackend {
             .slave
             .spawn_command(cmd)
             .map_err(|e| SessionError::Pty(e.to_string()))?;
+        let killer = child.clone_killer();
 
         // Drop slave immediately so EOF is delivered cleanly when child exits
         drop(pair.slave);
@@ -63,36 +65,56 @@ impl PtyBackend {
             .take_writer()
             .map_err(|e| SessionError::Pty(e.to_string()))?;
 
-        tokio::task::spawn_blocking(move || {
-            let mut buf = [0u8; 8192];
-            loop {
-                match reader.read(&mut buf) {
-                    Ok(0) => break,
-                    Ok(n) => {
-                        let data = Bytes::copy_from_slice(&buf[..n]);
-                        if output_tx.blocking_send(data).is_err() {
-                            break;
+        // Dedicated OS threads prevent blocking PTY reads from stalling Tokio runtime shutdown (notably on macOS).
+        std::thread::Builder::new()
+            .name("conduit-pty-reader".into())
+            .spawn(move || {
+                let mut buf = [0u8; 8192];
+                loop {
+                    match reader.read(&mut buf) {
+                        Ok(0) => break,
+                        Ok(n) => {
+                            let data = Bytes::copy_from_slice(&buf[..n]);
+                            if output_tx.blocking_send(data).is_err() {
+                                break;
+                            }
                         }
+                        Err(_) => break,
                     }
-                    Err(_) => break,
                 }
-            }
-            let _ = child.wait();
-        });
+                let _ = child.wait();
+            })
+            .map_err(|e| SessionError::Pty(e.to_string()))?;
 
         let (input_tx, mut input_rx) = mpsc::channel::<Bytes>(256);
-        tokio::task::spawn_blocking(move || {
-            while let Some(data) = input_rx.blocking_recv() {
-                if writer.write_all(&data).is_err() || writer.flush().is_err() {
-                    break;
+        std::thread::Builder::new()
+            .name("conduit-pty-writer".into())
+            .spawn(move || {
+                while let Some(data) = input_rx.blocking_recv() {
+                    if writer.write_all(&data).is_err() || writer.flush().is_err() {
+                        break;
+                    }
                 }
-            }
-        });
+            })
+            .map_err(|e| SessionError::Pty(e.to_string()))?;
 
         Ok(Self {
             master: Mutex::new(pair.master),
+            killer: Mutex::new(killer),
             input_tx,
         })
+    }
+
+    fn terminate_child(&self) {
+        if let Ok(mut killer) = self.killer.lock() {
+            let _ = killer.kill();
+        }
+    }
+}
+
+impl Drop for PtyBackend {
+    fn drop(&mut self) {
+        self.terminate_child();
     }
 }
 
@@ -118,6 +140,7 @@ impl SessionBackend for PtyBackend {
     }
 
     async fn close(&self) -> Result<(), SessionError> {
+        self.terminate_child();
         Ok(())
     }
 }
@@ -129,18 +152,19 @@ mod tests {
     #[tokio::test]
     async fn pty_spawns_and_echoes_output() {
         let (tx, mut rx) = mpsc::channel(32);
-        let shell = if cfg!(windows) {
-            Some("cmd.exe".to_string())
+        let (shell, script) = if cfg!(windows) {
+            (
+                Some("cmd.exe".to_string()),
+                &b"echo conduit_pty_ok\r\nexit\r\n"[..],
+            )
         } else {
-            Some("/bin/sh".to_string())
+            (Some("/bin/sh".to_string()), &b"echo conduit_pty_ok\nexit\n"[..])
         };
 
         let pty = PtyBackend::spawn(shell, None, TerminalSize { cols: 80, rows: 24 }, tx)
             .expect("pty should spawn");
 
-        pty.write(Bytes::from_static(b"echo conduit_pty_ok\r\nexit\r\n"))
-            .await
-            .unwrap();
+        pty.write(Bytes::copy_from_slice(script)).await.unwrap();
 
         let mut collected = Vec::new();
         let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(5);
@@ -156,6 +180,8 @@ mod tests {
                 Err(_) => {}
             }
         }
+
+        let _ = pty.close().await;
 
         let output = String::from_utf8_lossy(&collected);
         assert!(

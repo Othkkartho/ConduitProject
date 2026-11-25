@@ -15,8 +15,6 @@ import type {
 } from '../types';
 
 export interface AppTransport {
-  readonly mode: 'desktop' | 'web';
-
   // Terminal Session Lifecycle
   createSession(
     config: SessionConfig,
@@ -53,6 +51,6 @@ export interface AppTransport {
   sftpMkdir(sessionId: SessionId, path: string): Promise<void>;
   sftpRemove(sessionId: SessionId, path: string, isDir: boolean): Promise<void>;
 
-  // Native desktop menu integration (optional in web mode)
-  onHostMenuEvent?(handler: (event: HostMenuEvent) => void): Promise<() => void>;
+  // Native desktop menu integration
+  onHostMenuEvent(handler: (event: HostMenuEvent) => void): Promise<() => void>;
 }

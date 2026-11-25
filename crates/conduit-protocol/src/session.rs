@@ -92,27 +92,3 @@ pub struct SessionInfo {
     pub protocol: String,
     pub label: String,
 }
-
-/// 5-byte binary header opcodes used over WebSocket multiplexing
-#[repr(u8)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum FrameOpcode {
-    Data = 0x01,
-    Resize = 0x02,
-    Ack = 0x03,
-    Close = 0x04,
-}
-
-impl TryFrom<u8> for FrameOpcode {
-    type Error = ();
-
-    fn try_from(value: u8) -> Result<Self, Self::Error> {
-        match value {
-            0x01 => Ok(Self::Data),
-            0x02 => Ok(Self::Resize),
-            0x03 => Ok(Self::Ack),
-            0x04 => Ok(Self::Close),
-            _ => Err(()),
-        }
-    }
-}

@@ -164,3 +164,20 @@ impl Default for AppSettings {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn default_settings_values() {
+        let settings = AppSettings::default();
+        assert_eq!(settings.theme, "catppuccin-mocha");
+        assert_eq!(settings.font_size, 14);
+        assert!(!settings.confirm_on_close);
+        assert_eq!(
+            settings.shortcuts.get("quick_connect").map(String::as_str),
+            Some("Ctrl+Shift+E")
+        );
+    }
+}
