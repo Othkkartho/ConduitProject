@@ -1,0 +1,218 @@
+import type { ITheme } from '@xterm/xterm';
+
+export interface ThemePreset {
+  id: string;
+  name: string;
+  isLight?: boolean;
+  ui: {
+    bgBase: string;
+    bgSurface: string;
+    bgElevated: string;
+    border: string;
+    textPrimary: string;
+    textMuted: string;
+    accent: string;
+    accentText: string;
+    broadcast: string;
+    danger: string;
+  };
+  xterm: ITheme;
+}
+
+export const THEME_PRESETS: ThemePreset[] = [
+  {
+    id: 'catppuccin-mocha',
+    name: 'Catppuccin Mocha',
+    ui: {
+      bgBase: '#11111b',
+      bgSurface: '#181825',
+      bgElevated: '#1e1e2e',
+      border: '#313244',
+      textPrimary: '#cdd6f4',
+      textMuted: '#a6adc8',
+      accent: '#89b4fa',
+      accentText: '#11111b',
+      broadcast: '#fab387',
+      danger: '#f38ba8',
+    },
+    xterm: {
+      background: '#1e1e2e',
+      foreground: '#cdd6f4',
+      cursor: '#f5e0dc',
+      selectionBackground: '#585b70',
+      black: '#45475a',
+      red: '#f38ba8',
+      green: '#a6e3a1',
+      yellow: '#f9e2af',
+      blue: '#89b4fa',
+      magenta: '#f5c2e7',
+      cyan: '#94e2d5',
+      white: '#bac2de',
+      brightBlack: '#585b70',
+      brightRed: '#f38ba8',
+      brightGreen: '#a6e3a1',
+      brightYellow: '#f9e2af',
+      brightBlue: '#89b4fa',
+      brightMagenta: '#f5c2e7',
+      brightCyan: '#94e2d5',
+      brightWhite: '#a6adc8',
+    },
+  },
+  {
+    id: 'tokyo-night',
+    name: 'Tokyo Night',
+    ui: {
+      bgBase: '#16161e',
+      bgSurface: '#1a1b26',
+      bgElevated: '#1f2335',
+      border: '#292e42',
+      textPrimary: '#c0caf5',
+      textMuted: '#7aa2f7',
+      accent: '#7aa2f7',
+      accentText: '#15161e',
+      broadcast: '#ff9e64',
+      danger: '#f7768e',
+    },
+    xterm: {
+      background: '#1a1b26',
+      foreground: '#c0caf5',
+      cursor: '#c0caf5',
+      selectionBackground: '#33467c',
+      black: '#15161e',
+      red: '#f7768e',
+      green: '#9ece6a',
+      yellow: '#e0af68',
+      blue: '#7aa2f7',
+      magenta: '#bb9af7',
+      cyan: '#7dcfff',
+      white: '#a9b1d6',
+      brightBlack: '#414868',
+      brightRed: '#f7768e',
+      brightGreen: '#9ece6a',
+      brightYellow: '#e0af68',
+      brightBlue: '#7aa2f7',
+      brightMagenta: '#bb9af7',
+      brightCyan: '#7dcfff',
+      brightWhite: '#c0caf5',
+    },
+  },
+  {
+    id: 'dracula',
+    name: 'Dracula',
+    ui: {
+      bgBase: '#191a21',
+      bgSurface: '#21222c',
+      bgElevated: '#282a36',
+      border: '#44475a',
+      textPrimary: '#f8f8f2',
+      textMuted: '#bd93f9',
+      accent: '#bd93f9',
+      accentText: '#191a21',
+      broadcast: '#ffb86c',
+      danger: '#ff5555',
+    },
+    xterm: {
+      background: '#282a36',
+      foreground: '#f8f8f2',
+      cursor: '#f8f8f2',
+      selectionBackground: '#44475a',
+      black: '#21222c',
+      red: '#ff5555',
+      green: '#50fa7b',
+      yellow: '#f1fa8c',
+      blue: '#bd93f9',
+      magenta: '#ff79c6',
+      cyan: '#8be9fd',
+      white: '#f8f8f2',
+      brightBlack: '#6272a4',
+      brightRed: '#ff6e6e',
+      brightGreen: '#69ff94',
+      brightYellow: '#ffffa5',
+      brightBlue: '#d6acff',
+      brightMagenta: '#ff92df',
+      brightCyan: '#a4ffff',
+      brightWhite: '#ffffff',
+    },
+  },
+  {
+    id: 'one-dark-pro',
+    name: 'One Dark Pro',
+    ui: {
+      bgBase: '#1e222a',
+      bgSurface: '#21252b',
+      bgElevated: '#282c34',
+      border: '#3b4048',
+      textPrimary: '#abb2bf',
+      textMuted: '#7f848e',
+      accent: '#61afef',
+      accentText: '#1e222a',
+      broadcast: '#e5c07b',
+      danger: '#e06c75',
+    },
+    xterm: {
+      background: '#282c34',
+      foreground: '#abb2bf',
+      cursor: '#528bff',
+      selectionBackground: '#3e4451',
+      black: '#282c34',
+      red: '#e06c75',
+      green: '#98c379',
+      yellow: '#e5c07b',
+      blue: '#61afef',
+      magenta: '#c678dd',
+      cyan: '#56b6c2',
+      white: '#abb2bf',
+      brightBlack: '#5c6370',
+      brightRed: '#e06c75',
+      brightGreen: '#98c379',
+      brightYellow: '#e5c07b',
+      brightBlue: '#61afef',
+      brightMagenta: '#c678dd',
+      brightCyan: '#56b6c2',
+      brightWhite: '#ffffff',
+    },
+  },
+  {
+    id: 'solarized-light',
+    name: 'Solarized Light',
+    isLight: true,
+    ui: {
+      bgBase: '#eee8d5',
+      bgSurface: '#f5efdc',
+      bgElevated: '#fdf6e3',
+      border: '#d3cbb7',
+      textPrimary: '#586e75',
+      textMuted: '#839496',
+      accent: '#268bd2',
+      accentText: '#fdf6e3',
+      broadcast: '#cb4b16',
+      danger: '#dc322f',
+    },
+    xterm: {
+      background: '#fdf6e3',
+      foreground: '#657b83',
+      cursor: '#586e75',
+      selectionBackground: '#eee8d5',
+      black: '#073642',
+      red: '#dc322f',
+      green: '#859900',
+      yellow: '#b58900',
+      blue: '#268bd2',
+      magenta: '#d33682',
+      cyan: '#2aa198',
+      white: '#eee8d5',
+      brightBlack: '#002b36',
+      brightRed: '#cb4b16',
+      brightGreen: '#586e75',
+      brightYellow: '#657b83',
+      brightBlue: '#839496',
+      brightMagenta: '#6c71c4',
+      brightCyan: '#93a1a1',
+      brightWhite: '#fdf6e3',
+    },
+  },
+];
+
+export function getThemePreset(themeId: string): ThemePreset {
+  return THEME_PRESETS.find((t) => t.id === themeId) ?? THEME_PRESETS[0];
+}
