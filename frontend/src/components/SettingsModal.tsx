@@ -1,0 +1,177 @@
+import React, { useEffect, useState } from 'react';
+import { X } from 'lucide-react';
+import { useAppStore } from '../store/useAppStore';
+import { THEME_PRESETS } from '../themes/presets';
+import type { AppSettings } from '../types';
+
+const FONT_PRESETS = [
+  '"JetBrainsMono Nerd Font", "Cascadia Code", monospace',
+  '"FiraCode Nerd Font", "Fira Code", monospace',
+  '"MesloLGS NF", "Consolas", monospace',
+  '"Cascadia Code", "Consolas", monospace',
+];
+
+export const SettingsModal: React.FC = () => {
+  const { settingsOpen, setSettingsOpen, settings, updateSettings } = useAppStore();
+  const [draft, setDraft] = useState<AppSettings>(settings);
+
+  useEffect(() => {
+    if (settingsOpen) setDraft(settings);
+  }, [settingsOpen, settings]);
+
+  useEffect(() => {
+    if (!settingsOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSettingsOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [settingsOpen, setSettingsOpen]);
+
+  if (!settingsOpen) return null;
+
+  const saveAndClose = async () => {
+    await updateSettings(draft);
+    setSettingsOpen(false);
+  };
+
+  return (
+    <div className="modal-backdrop">
+      <div className="modal-card">
+        <div className="modal-header">
+          <span>터미널 커스터마이징 설정</span>
+          <button className="icon-btn" onClick={() => setSettingsOpen(false)}>
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="modal-body">
+          <div className="form-field">
+            <label>컬러 스킴 (Color Scheme)</label>
+            <div className="theme-grid">
+              {THEME_PRESETS.map((preset) => (
+                <button
+                  key={preset.id}
+                  className={`theme-card ${draft.theme === preset.id ? 'active' : ''}`}
+                  onClick={() => {
+                    const next = { ...draft, theme: preset.id };
+                    setDraft(next);
+                    void updateSettings(next);
+                  }}
+                >
+                  <strong>{preset.name}</strong>
+                  <div className="swatch-row">
+                    <span className="swatch-dot" style={{ background: preset.ui.bgElevated }} />
+                    <span className="swatch-dot" style={{ background: preset.ui.accent }} />
+                    <span className="swatch-dot" style={{ background: preset.xterm.green }} />
+                    <span className="swatch-dot" style={{ background: preset.ui.broadcast }} />
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="form-grid">
+            <div className="form-field full">
+              <label>폰트 패밀리 (Nerd Fonts 및 합자 지원)</label>
+              <input
+                list="conduit-font-presets"
+                value={draft.font_family}
+                onChange={(e) => setDraft({ ...draft, font_family: e.target.value })}
+              />
+              <datalist id="conduit-font-presets">
+                {FONT_PRESETS.map((f) => (
+                  <option key={f} value={f} />
+                ))}
+              </datalist>
+            </div>
+
+            <div className="form-field">
+              <label>폰트 크기 ({draft.font_size}px)</label>
+              <input
+                type="range"
+                min={10}
+                max={24}
+                value={draft.font_size}
+                onChange={(e) => setDraft({ ...draft, font_size: Number(e.target.value) })}
+              />
+            </div>
+
+            <div className="form-field">
+              <label>커서 스타일</label>
+              <select
+                value={draft.cursor_style}
+                onChange={(e) =>
+                  setDraft({
+                    ...draft,
+                    cursor_style: e.target.value as AppSettings['cursor_style'],
+                  })
+                }
+              >
+                <option value="block">Block</option>
+                <option value="underline">Underline</option>
+                <option value="bar">Bar</option>
+              </select>
+            </div>
+
+            <div className="form-field">
+              <label>스크롤백 버퍼 (Lines)</label>
+              <input
+                type="number"
+                min={500}
+                max={100000}
+                step={500}
+                value={draft.scrollback}
+                onChange={(e) => setDraft({ ...draft, scrollback: Number(e.target.value) })}
+              />
+            </div>
+
+            <div className="form-field">
+              <label>세션 종료 시 동작</label>
+              <select
+                value={draft.confirm_on_close ? 'ask' : 'immediate'}
+                onChange={(e) =>
+                  setDraft({
+                    ...draft,
+                    confirm_on_close: e.target.value === 'ask',
+                  })
+                }
+              >
+                <option value="immediate">바로 닫기</option>
+                <option value="ask">종료 전 한 번 물어보기</option>
+              </select>
+            </div>
+
+            <div className="form-field full" style={{ justifyContent: 'center' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <input
+                  type="checkbox"
+                  checked={draft.ligatures}
+                  onChange={(e) => setDraft({ ...draft, ligatures: e.target.checked })}
+                />
+                <span>폰트 합자(Ligatures) 사용</span>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <input
+                  type="checkbox"
+                  checked={draft.cursor_blink}
+                  onChange={(e) => setDraft({ ...draft, cursor_blink: e.target.checked })}
+                />
+                <span>커서 깜빡임</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div className="modal-footer">
+          <button className="btn-secondary" onClick={() => setSettingsOpen(false)}>
+            닫기
+          </button>
+          <button className="btn-primary" onClick={() => void saveAndClose()}>
+            저장 및 적용
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
