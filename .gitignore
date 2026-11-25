@@ -1,0 +1,33 @@
+# Rust / Cargo
+/target/
+**/*.rs.bk
+Cargo.lock
+
+# Node / Frontend
+node_modules/
+frontend/node_modules/
+frontend/package-lock.json
+frontend/dist/
+frontend/.vite/
+*.tsbuildinfo
+
+# Tauri
+apps/desktop/src-tauri/target/
+apps/desktop/src-tauri/gen/schemas/
+
+# Local databases & secrets
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+.conduit-master.key
+.env
+.env.*
+
+# OS & Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log
