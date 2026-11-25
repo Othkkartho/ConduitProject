@@ -32,15 +32,22 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
       - name: Install Linux Tauri dependencies
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libsecret-1-dev libudev-dev
-      - name: Build frontend and generate icons for Tauri context
-        run: |
-          node scripts/generate-icons.mjs
-          cd frontend && npm install && npm run build
+          sudo apt-get install -y build-essential pkg-config libssl-dev libgtk-3-dev libxdo-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf libsecret-1-dev libudev-dev
+      - name: Generate desktop icons for Tauri context
+        run: node scripts/generate-icons.mjs
+      - name: Install frontend dependencies for Tauri context
+        working-directory: frontend
+        run: npm install
+      - name: Build frontend for Tauri context
+        working-directory: frontend
+        run: npm run build
       - name: Run workspace unit tests
         run: cargo test --workspace
       - name: Check entire workspace
