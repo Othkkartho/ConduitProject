@@ -13,19 +13,19 @@ export interface ManualSection {
 export const USER_MANUAL_SECTIONS: ManualSection[] = [
   {
     id: 'getting-started',
-    title: '1. 시작하기 (Desktop & Web)',
+    title: '1. 시작하기 (Conduit Desktop)',
     badge: '개요',
     summary:
-      'Conduit은 하나의 Rust 코어 엔진을 Tauri v2 데스크톱 앱과 Axum 웹 서버 양쪽에서 재사용하는 하이브리드 터미널입니다.',
+      'Conduit은 Rust 코어 엔진과 Tauri v2 기반으로 동작하는 크로스 플랫폼 멀티 프로토콜 데스크톱 터미널입니다.',
     blocks: [
       {
-        heading: '실행 모드 자동 감지',
+        heading: '네이티브 데스크톱 아키텍처',
         body: [
-          '데스크톱 앱(Tauri v2)에서는 Binary IPC Channel을 통해 OS와 직접 통신하며, 상단 네이티브 메뉴의 [보기] / [도움말 → 사용자 매뉴얼] 또는 F1 키로 언제든 이 매뉴얼을 열 수 있습니다.',
-          '웹 브라우저 모드(Axum)에서는 단일 WebSocket 연결 위에서 5바이트 바이너리 프레임 멀티플렉싱으로 다중 세션을 동시에 처리합니다.',
+          'Tauri v2 Binary IPC Channel을 통해 OS와 직접 통신하며, 자격 증명 마스터 키는 OS 키체인에 안전하게 보관됩니다.',
+          '상단 네이티브 메뉴의 [보기] / [도움말 → 사용자 매뉴얼] 또는 F1 키로 언제든 이 매뉴얼을 열 수 있습니다.',
         ],
         tips: [
-          '우측 상단 배지(Desktop App / Web Mode)로 현재 실행 중인 호스트 환경을 확인할 수 있습니다.',
+          'Windows, macOS, Linux에서 동일한 UI와 단축키로 로컬 쉘·SSH·SFTP·Serial·Telnet 세션을 통합 관리할 수 있습니다.',
         ],
       },
     ],

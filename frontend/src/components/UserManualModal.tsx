@@ -5,7 +5,6 @@ import { useAppStore } from '../store/useAppStore';
 
 export const UserManualModal: React.FC = () => {
   const {
-    transport,
     manualOpen,
     manualSectionId,
     setManualOpen,
@@ -51,9 +50,7 @@ export const UserManualModal: React.FC = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <BookOpen size={16} />
             <span>Conduit 사용자 매뉴얼</span>
-            <span className="mode-badge">
-              {transport.mode === 'desktop' ? 'Desktop App (Tauri v2)' : 'Web Mode (Axum WS)'}
-            </span>
+            <span className="mode-badge">v0.1.0</span>
           </div>
           <button className="icon-btn" onClick={() => setManualOpen(false)}>
             <X size={16} />
