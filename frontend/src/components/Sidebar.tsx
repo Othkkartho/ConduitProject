@@ -21,11 +21,10 @@ import type {
   FolderPosition,
 } from '../types';
 
-interface ContextMenuState {
-  x: number;
-  y: number;
-  folder: Folder | null;
-}
+type ContextMenuState =
+  | { kind: 'root'; x: number; y: number }
+  | { kind: 'folder'; x: number; y: number; folder: Folder }
+  | { kind: 'bookmark'; x: number; y: number; bookmark: Bookmark };
 
 type TreeDropHint =
   | { kind: 'folder'; id: string; pos: 'before' | 'inside' | 'after' }
@@ -417,11 +416,21 @@ export const Sidebar: React.FC = () => {
           setDraggingItem(null);
           void handleDropOnBookmark(bm, pos, payload);
         }}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setContextMenu({
+            kind: 'bookmark',
+            x: e.clientX,
+            y: e.clientY,
+            bookmark: bm,
+          });
+        }}
       >
         <div
           className="row-main"
           onClick={() => void connectBookmark(bm)}
-          title="클릭하여 새 탭 연결 · 드래그하여 위치 이동 또는 창 분할"
+          title={bm.name}
         >
           <Server
             size={13}
@@ -558,10 +567,19 @@ export const Sidebar: React.FC = () => {
           onContextMenu={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            setContextMenu({ x: e.clientX, y: e.clientY, folder });
+            setContextMenu({
+              kind: 'folder',
+              x: e.clientX,
+              y: e.clientY,
+              folder,
+            });
           }}
         >
-          <div className="row-main" onClick={() => toggleFolder(folder.id)}>
+          <div
+            className="row-main"
+            onClick={() => toggleFolder(folder.id)}
+            title={folder.name}
+          >
             {isCollapsed ? (
               <ChevronRight size={13} style={{ flexShrink: 0 }} />
             ) : (
@@ -703,7 +721,7 @@ export const Sidebar: React.FC = () => {
         }}
         onContextMenu={(e) => {
           e.preventDefault();
-          setContextMenu({ x: e.clientX, y: e.clientY, folder: null });
+          setContextMenu({ kind: 'root', x: e.clientX, y: e.clientY });
         }}
       >
         {rootFolders.map((f) => renderFolder(f, new Set()))}
@@ -722,7 +740,7 @@ export const Sidebar: React.FC = () => {
           style={{ left: contextMenu.x, top: contextMenu.y }}
           onClick={(e) => e.stopPropagation()}
         >
-          {contextMenu.folder ? (
+          {contextMenu.kind === 'folder' ? (
             <>
               <div className="context-menu-title">
                 폴더: {contextMenu.folder.name}
@@ -730,7 +748,7 @@ export const Sidebar: React.FC = () => {
               <button
                 className="context-menu-item"
                 onClick={() => {
-                  const targetId = contextMenu.folder!.id;
+                  const targetId = contextMenu.folder.id;
                   setContextMenu(null);
                   void handleAddFolder(targetId);
                 }}
@@ -741,7 +759,7 @@ export const Sidebar: React.FC = () => {
               <button
                 className="context-menu-item"
                 onClick={() => {
-                  const targetId = contextMenu.folder!.id;
+                  const targetId = contextMenu.folder.id;
                   setContextMenu(null);
                   openQuickConnect(null, targetId);
                 }}
@@ -752,13 +770,41 @@ export const Sidebar: React.FC = () => {
               <button
                 className="context-menu-item danger"
                 onClick={() => {
-                  const targetFolder = contextMenu.folder!;
+                  const targetFolder = contextMenu.folder;
                   setContextMenu(null);
                   requestDeleteFolder(targetFolder);
                 }}
               >
                 <Trash2 size={13} />
                 <span>폴더 삭제</span>
+              </button>
+            </>
+          ) : contextMenu.kind === 'bookmark' ? (
+            <>
+              <div className="context-menu-title">
+                세션: {contextMenu.bookmark.name}
+              </div>
+              <button
+                className="context-menu-item"
+                onClick={() => {
+                  const targetBm = contextMenu.bookmark;
+                  setContextMenu(null);
+                  openQuickConnect(targetBm);
+                }}
+              >
+                <Pencil size={13} />
+                <span>세션 편집</span>
+              </button>
+              <button
+                className="context-menu-item danger"
+                onClick={() => {
+                  const targetBm = contextMenu.bookmark;
+                  setContextMenu(null);
+                  requestDeleteBookmark(targetBm);
+                }}
+              >
+                <Trash2 size={13} />
+                <span>세션 삭제</span>
               </button>
             </>
           ) : (

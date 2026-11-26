@@ -12,23 +12,131 @@ const FONT_PRESETS = [
 ];
 
 export const SettingsModal: React.FC = () => {
-  const { settingsOpen, setSettingsOpen, settings, updateSettings } = useAppStore();
+  const {
+    settingsOpen,
+    setSettingsOpen,
+    settings,
+    masterPasswordEnabled,
+    updateSettings,
+    setMasterPassword,
+    disableMasterPassword,
+    resetSavedSessions,
+  } = useAppStore();
   const [draft, setDraft] = useState<AppSettings>(settings);
+  const [resetModalOpen, setResetModalOpen] = useState(false);
+  const [resetConfirmText, setResetConfirmText] = useState('');
+  const [resetting, setResetting] = useState(false);
+  const [resetDoneMessage, setResetDoneMessage] = useState<string | null>(null);
+
+  const [mpMode, setMpMode] = useState<'idle' | 'enable' | 'change' | 'disable'>('idle');
+  const [mpCurrent, setMpCurrent] = useState('');
+  const [mpNew, setMpNew] = useState('');
+  const [mpConfirm, setMpConfirm] = useState('');
+  const [mpBusy, setMpBusy] = useState(false);
+  const [mpError, setMpError] = useState<string | null>(null);
+  const [mpStatusMessage, setMpStatusMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    if (settingsOpen) setDraft(settings);
+    if (settingsOpen) {
+      setDraft(settings);
+      setResetModalOpen(false);
+      setResetConfirmText('');
+      setResetDoneMessage(null);
+      setMpMode('idle');
+      setMpCurrent('');
+      setMpNew('');
+      setMpConfirm('');
+      setMpError(null);
+      setMpStatusMessage(null);
+    }
   }, [settingsOpen, settings]);
 
   useEffect(() => {
     if (!settingsOpen) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setSettingsOpen(false);
+      if (e.key === 'Escape') {
+        if (resetModalOpen) {
+          setResetModalOpen(false);
+          setResetConfirmText('');
+        } else {
+          setSettingsOpen(false);
+        }
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [settingsOpen, setSettingsOpen]);
+  }, [settingsOpen, resetModalOpen, setSettingsOpen]);
 
   if (!settingsOpen) return null;
+
+  const canConfirmReset = resetConfirmText.trim() === '초기화' && !resetting;
+
+  const handleConfirmReset = async () => {
+    if (!canConfirmReset) return;
+    setResetting(true);
+    try {
+      await resetSavedSessions();
+      setResetModalOpen(false);
+      setResetConfirmText('');
+      setResetDoneMessage('저장된 모든 세션(폴더/북마크/자격 증명)이 초기화되었습니다.');
+    } finally {
+      setResetting(false);
+    }
+  };
+
+  const closeMpForm = () => {
+    setMpMode('idle');
+    setMpCurrent('');
+    setMpNew('');
+    setMpConfirm('');
+    setMpError(null);
+  };
+
+  const handleSaveMasterPassword = async () => {
+    setMpError(null);
+    setMpStatusMessage(null);
+    if (!mpNew) {
+      setMpError('새 마스터 패스워드를 입력해 주세요.');
+      return;
+    }
+    if (mpNew !== mpConfirm) {
+      setMpError('새 마스터 패스워드가 서로 일치하지 않습니다.');
+      return;
+    }
+    setMpBusy(true);
+    try {
+      await setMasterPassword(mpNew, mpMode === 'change' ? mpCurrent : null);
+      closeMpForm();
+      setMpStatusMessage(
+        mpMode === 'change'
+          ? '마스터 패스워드가 변경되었습니다.'
+          : '마스터 패스워드가 활성화되었습니다. 다음 실행부터 잠금 화면이 표시됩니다.'
+      );
+    } catch (err: unknown) {
+      setMpError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setMpBusy(false);
+    }
+  };
+
+  const handleDisableMasterPassword = async () => {
+    setMpError(null);
+    setMpStatusMessage(null);
+    if (!mpCurrent) {
+      setMpError('현재 마스터 패스워드를 입력해 주세요.');
+      return;
+    }
+    setMpBusy(true);
+    try {
+      await disableMasterPassword(mpCurrent);
+      closeMpForm();
+      setMpStatusMessage('마스터 패스워드 잠금이 해제되었습니다.');
+    } catch (err: unknown) {
+      setMpError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setMpBusy(false);
+    }
+  };
 
   const saveAndClose = async () => {
     await updateSettings(draft);
@@ -161,6 +269,149 @@ export const SettingsModal: React.FC = () => {
               </label>
             </div>
           </div>
+
+          <div className="master-pw-card">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={masterPasswordEnabled}
+                  onChange={(e) => {
+                    setMpStatusMessage(null);
+                    setMpError(null);
+                    if (e.target.checked) {
+                      setMpMode('enable');
+                    } else if (masterPasswordEnabled) {
+                      setMpMode('disable');
+                    } else {
+                      closeMpForm();
+                    }
+                  }}
+                />
+                <strong>마스터 패스워드 사용 (프로그램 실행 시 입력 요구)</strong>
+              </label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span className={`status-pill ${masterPasswordEnabled ? 'on' : ''}`}>
+                  {masterPasswordEnabled ? '활성화됨' : '비활성화 (기본값)'}
+                </span>
+                {masterPasswordEnabled && mpMode === 'idle' && (
+                  <button
+                    className="btn-secondary"
+                    style={{ padding: '4px 10px', fontSize: 12 }}
+                    onClick={() => {
+                      setMpStatusMessage(null);
+                      setMpError(null);
+                      setMpMode('change');
+                    }}
+                  >
+                    패스워드 변경
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {mpStatusMessage && (
+              <span style={{ fontSize: 12, color: 'var(--accent)' }}>
+                {mpStatusMessage}
+              </span>
+            )}
+
+            {(mpMode === 'enable' || mpMode === 'change') && (
+              <div className="form-grid" style={{ marginTop: 4 }}>
+                {mpMode === 'change' && (
+                  <div className="form-field full">
+                    <label>현재 마스터 패스워드</label>
+                    <input
+                      type="password"
+                      value={mpCurrent}
+                      onChange={(e) => setMpCurrent(e.target.value)}
+                    />
+                  </div>
+                )}
+                <div className="form-field">
+                  <label>새 마스터 패스워드</label>
+                  <input
+                    type="password"
+                    value={mpNew}
+                    onChange={(e) => setMpNew(e.target.value)}
+                  />
+                </div>
+                <div className="form-field">
+                  <label>새 마스터 패스워드 확인</label>
+                  <input
+                    type="password"
+                    value={mpConfirm}
+                    onChange={(e) => setMpConfirm(e.target.value)}
+                  />
+                </div>
+                {mpError && (
+                  <div className="form-field full">
+                    <div className="modal-error-banner">{mpError}</div>
+                  </div>
+                )}
+                <div className="form-field full" style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 8 }}>
+                  <button className="btn-secondary" disabled={mpBusy} onClick={closeMpForm}>
+                    취소
+                  </button>
+                  <button className="btn-primary" disabled={mpBusy} onClick={() => void handleSaveMasterPassword()}>
+                    {mpBusy ? '저장 중...' : '마스터 패스워드 적용'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {mpMode === 'disable' && (
+              <div className="form-grid" style={{ marginTop: 4 }}>
+                <div className="form-field full">
+                  <label>해제를 위해 현재 마스터 패스워드를 입력하세요</label>
+                  <input
+                    type="password"
+                    value={mpCurrent}
+                    onChange={(e) => setMpCurrent(e.target.value)}
+                  />
+                </div>
+                {mpError && (
+                  <div className="form-field full">
+                    <div className="modal-error-banner">{mpError}</div>
+                  </div>
+                )}
+                <div className="form-field full" style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 8 }}>
+                  <button className="btn-secondary" disabled={mpBusy} onClick={closeMpForm}>
+                    취소
+                  </button>
+                  <button className="btn-danger" disabled={mpBusy} onClick={() => void handleDisableMasterPassword()}>
+                    {mpBusy ? '처리 중...' : '잠금 해제(비활성화)'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="danger-zone-card">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <strong style={{ color: 'var(--danger)' }}>
+                저장된 세션 초기화
+              </strong>
+              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                SQLite에 저장된 모든 세션 북마크, 폴더 구조 및 암호화된 자격 증명을 삭제합니다.
+              </span>
+              {resetDoneMessage && (
+                <span style={{ fontSize: 12, color: 'var(--accent)' }}>
+                  {resetDoneMessage}
+                </span>
+              )}
+            </div>
+            <button
+              className="btn-danger"
+              style={{ flexShrink: 0 }}
+              onClick={() => {
+                setResetConfirmText('');
+                setResetModalOpen(true);
+              }}
+            >
+              세션 초기화
+            </button>
+          </div>
         </div>
 
         <div className="modal-footer">
@@ -172,6 +423,56 @@ export const SettingsModal: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {resetModalOpen && (
+        <div
+          className="modal-backdrop"
+          style={{ zIndex: 120 }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="ssh-password-card">
+            <div style={{ fontWeight: 600, color: 'var(--danger)' }}>
+              저장된 세션을 정말 초기화하시겠습니까?
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5 }}>
+              모든 세션 북마크, 폴더 및 저장된 비밀번호가 영구 삭제됩니다. 계속하려면 아래 입력창에 <strong>초기화</strong>를 입력한 뒤 확인을 누르세요.
+            </div>
+            <input
+              type="text"
+              className="ssh-password-input"
+              placeholder="초기화"
+              autoFocus
+              value={resetConfirmText}
+              onChange={(e) => setResetConfirmText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && canConfirmReset) {
+                  e.preventDefault();
+                  void handleConfirmReset();
+                }
+              }}
+            />
+            <div className="ssh-password-footer" style={{ justifyContent: 'flex-end', gap: 8 }}>
+              <button
+                className="btn-secondary"
+                disabled={resetting}
+                onClick={() => {
+                  setResetModalOpen(false);
+                  setResetConfirmText('');
+                }}
+              >
+                취소
+              </button>
+              <button
+                className="btn-danger"
+                disabled={!canConfirmReset}
+                onClick={() => void handleConfirmReset()}
+              >
+                {resetting ? '초기화 중...' : '확인'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

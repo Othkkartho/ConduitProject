@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { X } from 'lucide-react';
+import { DEFAULT_ENCODING, ENCODING_OPTIONS } from '../constants/encodings';
 import { useAppStore } from '../store/useAppStore';
 import type { Bookmark, Folder, ProtocolType, SessionConfig } from '../types';
 
@@ -67,8 +68,16 @@ export const QuickConnectModal: React.FC = () => {
   const [cwd, setCwd] = useState('');
   const [serialPort, setSerialPort] = useState('');
   const [baudRate, setBaudRate] = useState(115200);
+  const [encoding, setEncoding] = useState(DEFAULT_ENCODING);
   const [serialPorts, setSerialPorts] = useState<string[]>([]);
   const [saveToBookmarks, setSaveToBookmarks] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [testing, setTesting] = useState(false);
+  const [pendingForceSave, setPendingForceSave] = useState<{
+    bm: Bookmark;
+    password?: string;
+    reason: string;
+  } | null>(null);
 
   const folderOptions = useMemo(
     () => buildFolderOptions(bookmarkTree.folders),
@@ -77,6 +86,9 @@ export const QuickConnectModal: React.FC = () => {
 
   useEffect(() => {
     if (!quickConnectOpen) return;
+    setErrorMessage(null);
+    setTesting(false);
+    setPendingForceSave(null);
     void transport
       .listSerialPorts()
       .then((ports) => {
@@ -100,6 +112,7 @@ export const QuickConnectModal: React.FC = () => {
       setCwd(editingBookmark.cwd ?? '');
       setSerialPort(editingBookmark.serial_port ?? '');
       setBaudRate(editingBookmark.baud_rate ?? 115200);
+      setEncoding(editingBookmark.encoding ?? DEFAULT_ENCODING);
       setPassword('');
       setSaveToBookmarks(true);
     } else if (saveFromPaneDraft) {
@@ -118,6 +131,7 @@ export const QuickConnectModal: React.FC = () => {
       setCwd(saveFromPaneDraft.cwd ?? '');
       setSerialPort(saveFromPaneDraft.serial_port ?? '');
       setBaudRate(saveFromPaneDraft.baud_rate ?? 115200);
+      setEncoding(saveFromPaneDraft.encoding ?? DEFAULT_ENCODING);
       setPassword('');
       setSaveToBookmarks(true);
       if (saveFromPaneDraft.protocol === 'ssh') {
@@ -134,6 +148,7 @@ export const QuickConnectModal: React.FC = () => {
       setKeyPath('~/.ssh/id_ed25519');
       setShell('');
       setCwd('');
+      setEncoding(DEFAULT_ENCODING);
       setPassword('');
       setSaveToBookmarks(true);
     }
@@ -150,12 +165,16 @@ export const QuickConnectModal: React.FC = () => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.stopPropagation();
-        closeQuickConnect();
+        if (pendingForceSave) {
+          setPendingForceSave(null);
+        } else {
+          closeQuickConnect();
+        }
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [quickConnectOpen, closeQuickConnect]);
+  }, [quickConnectOpen, pendingForceSave, closeQuickConnect]);
 
   if (!quickConnectOpen) return null;
 
@@ -167,6 +186,7 @@ export const QuickConnectModal: React.FC = () => {
         shell: shell.trim() || undefined,
         cwd: cwd.trim() || undefined,
         size,
+        encoding,
       };
     }
     if (protocol === 'ssh') {
@@ -184,6 +204,7 @@ export const QuickConnectModal: React.FC = () => {
                 passphrase: password || undefined,
               },
         size,
+        encoding,
       };
     }
     if (protocol === 'serial') {
@@ -191,6 +212,7 @@ export const QuickConnectModal: React.FC = () => {
         protocol: 'serial',
         port_name: serialPort.trim(),
         baud_rate: Number(baudRate) || 115200,
+        encoding,
       };
     }
     return {
@@ -198,12 +220,25 @@ export const QuickConnectModal: React.FC = () => {
       host: host.trim(),
       port: Number(port) || 23,
       size,
+      encoding,
     };
   };
 
   const handleSubmit = async (connectNow: boolean) => {
+    if (testing) return;
+    setErrorMessage(null);
+
+    if ((protocol === 'ssh' || protocol === 'telnet') && !host.trim()) {
+      setErrorMessage('호스트(IP 또는 도메인)를 입력해 주세요.');
+      return;
+    }
+    if (protocol === 'serial' && !serialPort.trim()) {
+      setErrorMessage('시리얼 포트를 입력해 주세요.');
+      return;
+    }
+
     const cfg = buildConfig();
-    const displayName =
+    const displayName = (
       name.trim() ||
       (cfg.protocol === 'local_pty'
         ? cfg.shell || 'Local Shell'
@@ -211,9 +246,20 @@ export const QuickConnectModal: React.FC = () => {
           ? `${cfg.username}@${cfg.host}`
           : cfg.protocol === 'serial'
             ? cfg.port_name
-            : `${cfg.host}:${cfg.port}`);
+            : `${cfg.host}:${cfg.port}`)
+    ).trim();
 
     if (saveToBookmarks) {
+      const isDuplicateName = bookmarkTree.bookmarks.some(
+        (b) => b.name.trim() === displayName && b.id !== editingBookmark?.id
+      );
+      if (isDuplicateName) {
+        setErrorMessage(
+          `이미 "${displayName}" 이름의 세션이 존재합니다. 다른 이름을 입력해 주세요.`
+        );
+        return;
+      }
+
       const targetFolderId = folderId || null;
       const defaultOrder =
         editingBookmark?.sort_order ??
@@ -240,17 +286,61 @@ export const QuickConnectModal: React.FC = () => {
             ? keyPath.trim()
             : null,
         credential_id: editingBookmark?.credential_id ?? null,
+        encoding,
         sort_order: defaultOrder,
         port_forwards: editingBookmark?.port_forwards ?? [],
         notes: editingBookmark?.notes ?? '',
       };
-      await saveBookmark(bm, password || undefined);
+
+      setTesting(true);
+      try {
+        await transport.testSessionConnection(cfg, editingBookmark?.id ?? null);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setTesting(false);
+        if (!connectNow) {
+          setPendingForceSave({
+            bm,
+            password: password || undefined,
+            reason: msg,
+          });
+          return;
+        }
+        setErrorMessage(`연결되지 않습니다: ${msg}`);
+        return;
+      }
+
+      try {
+        await saveBookmark(bm, password || undefined);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setErrorMessage(msg);
+        setTesting(false);
+        return;
+      }
+      setTesting(false);
     }
 
     if (connectNow) {
       openSessionTab(displayName, cfg);
     }
     closeQuickConnect();
+  };
+
+  const handleConfirmForceSave = async () => {
+    if (!pendingForceSave) return;
+    const target = pendingForceSave;
+    setPendingForceSave(null);
+    setTesting(true);
+    try {
+      await saveBookmark(target.bm, target.password);
+      setTesting(false);
+      closeQuickConnect();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setErrorMessage(msg);
+      setTesting(false);
+    }
   };
 
   return (
@@ -282,6 +372,7 @@ export const QuickConnectModal: React.FC = () => {
                 onChange={(e) => {
                   const p = e.target.value as ProtocolType;
                   setProtocol(p);
+                  setErrorMessage(null);
                   if (p === 'ssh') setPort(22);
                   if (p === 'telnet') setPort(23);
                 }}
@@ -299,11 +390,14 @@ export const QuickConnectModal: React.FC = () => {
                 type="text"
                 placeholder="비우면 user@host 자동 지정"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  setErrorMessage(null);
+                }}
               />
             </div>
 
-            <div className="form-field full">
+            <div className="form-field">
               <label>저장 폴더</label>
               <select
                 value={folderId}
@@ -318,13 +412,30 @@ export const QuickConnectModal: React.FC = () => {
               </select>
             </div>
 
+            <div className="form-field">
+              <label>인코딩 (Encoding)</label>
+              <select
+                value={encoding}
+                onChange={(e) => setEncoding(e.target.value)}
+              >
+                {ENCODING_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             {(protocol === 'ssh' || protocol === 'telnet') && (
               <>
                 <div className="form-field">
                   <label>호스트 (IP / 도메인)</label>
                   <input
                     value={host}
-                    onChange={(e) => setHost(e.target.value)}
+                    onChange={(e) => {
+                      setHost(e.target.value);
+                      setErrorMessage(null);
+                    }}
                   />
                 </div>
                 <div className="form-field">
@@ -332,7 +443,10 @@ export const QuickConnectModal: React.FC = () => {
                   <input
                     type="number"
                     value={port}
-                    onChange={(e) => setPort(Number(e.target.value))}
+                    onChange={(e) => {
+                      setPort(Number(e.target.value));
+                      setErrorMessage(null);
+                    }}
                   />
                 </div>
               </>
@@ -344,7 +458,10 @@ export const QuickConnectModal: React.FC = () => {
                   <label>사용자명</label>
                   <input
                     value={username}
-                    onChange={(e) => setUsername(e.target.value)}
+                    onChange={(e) => {
+                      setUsername(e.target.value);
+                      setErrorMessage(null);
+                    }}
                   />
                 </div>
                 <div className="form-field">
@@ -456,34 +573,81 @@ export const QuickConnectModal: React.FC = () => {
             <input
               type="checkbox"
               checked={saveToBookmarks}
-              onChange={(e) => setSaveToBookmarks(e.target.checked)}
+              onChange={(e) => {
+                setSaveToBookmarks(e.target.checked);
+                setErrorMessage(null);
+              }}
             />
-            <span>세션 북마크에 저장</span>
+            <span>세션 북마크에 저장 (저장 전 연결 가능 여부를 확인합니다)</span>
           </label>
+
+          {errorMessage && (
+            <div className="modal-error-banner" role="alert">
+              {errorMessage}
+            </div>
+          )}
         </div>
 
         <div className="modal-footer">
-          <button className="btn-secondary" onClick={closeQuickConnect}>
+          <button
+            className="btn-secondary"
+            onClick={closeQuickConnect}
+            disabled={testing}
+          >
             취소
           </button>
           {saveToBookmarks && (
             <button
               className="btn-secondary"
+              disabled={testing}
               onClick={() => void handleSubmit(false)}
             >
-              저장만 하기
+              {testing ? '연결 확인 중...' : '저장만 하기'}
             </button>
           )}
           {!saveFromPaneDraft && (
             <button
               className="btn-primary"
+              disabled={testing}
               onClick={() => void handleSubmit(true)}
             >
-              연결
+              {testing ? '연결 확인 중...' : '연결'}
             </button>
           )}
         </div>
       </div>
+
+      {pendingForceSave && (
+        <div
+          className="modal-backdrop"
+          style={{ zIndex: 120 }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="ssh-password-card">
+            <div style={{ fontWeight: 600, color: 'var(--broadcast)' }}>
+              연결되지 않습니다. 그래도 저장하시겠습니까?
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5 }}>
+              세션 <strong>{pendingForceSave.bm.name}</strong> 연결 확인 중 오류가 발생했습니다. 그래도 북마크에 저장하시겠습니까?
+            </div>
+            <div className="modal-error-banner">{pendingForceSave.reason}</div>
+            <div className="ssh-password-footer" style={{ justifyContent: 'flex-end', gap: 8 }}>
+              <button
+                className="btn-secondary"
+                onClick={() => setPendingForceSave(null)}
+              >
+                취소
+              </button>
+              <button
+                className="btn-primary"
+                onClick={() => void handleConfirmForceSave()}
+              >
+                그래도 저장
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
