@@ -47,6 +47,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   cursor_blink: true,
   scrollback: 10000,
   confirm_on_close: true,
+  master_password_enabled: false,
   shortcuts: {
     manual: 'F1',
     new_tab: 'Ctrl+Shift+T',
@@ -69,6 +70,7 @@ export function createLocalPtyConfig(): SessionConfig {
   return {
     protocol: 'local_pty',
     size: { cols: 100, rows: 30 },
+    encoding: 'utf-8',
   };
 }
 
@@ -349,6 +351,8 @@ interface AppState {
   activePaneId: string | null;
   bookmarkTree: BookmarkTree;
   settings: AppSettings;
+  appLockState: 'checking' | 'locked' | 'unlocked';
+  masterPasswordEnabled: boolean;
 
   // VS Code-style Dock & ActivityBar layout state
   viewZone: Record<DockViewId, DockZone>;
@@ -384,6 +388,12 @@ interface AppState {
   draggingItem: DragPayload | null;
 
   initialize: () => Promise<void>;
+  unlockWithMasterPassword: (password: string) => Promise<boolean>;
+  setMasterPassword: (
+    newPassword: string,
+    currentPassword?: string | null
+  ) => Promise<void>;
+  disableMasterPassword: (currentPassword: string) => Promise<void>;
   openSessionTab: (title: string, config: SessionConfig) => void;
   openLocalTab: () => void;
   setActiveTab: (tabId: string) => void;
@@ -403,6 +413,8 @@ interface AppState {
     errorMessage?: string
   ) => void;
   setPaneDetectedHostname: (paneId: string, hostname: string) => void;
+  setPaneEncoding: (paneId: string, encoding: string) => Promise<void>;
+  resetSavedSessions: () => Promise<void>;
 
   setDraggingItem: (item: DragPayload | null) => void;
   dropOnPane: (
@@ -488,6 +500,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   activePaneId: initialPane.id,
   bookmarkTree: { folders: [], bookmarks: [] },
   settings: DEFAULT_SETTINGS,
+  appLockState: 'checking',
+  masterPasswordEnabled: false,
 
   viewZone: {
     bookmarks: 'left',
@@ -524,20 +538,78 @@ export const useAppStore = create<AppState>((set, get) => ({
   initialize: async () => {
     const { transport } = get();
     try {
-      const [tree, loadedSettings] = await Promise.all([
-        transport.listBookmarkTree(),
+      const [mpStatus, loadedSettings] = await Promise.all([
+        transport.getMasterPasswordStatus(),
         transport.getSettings(),
       ]);
       const normalized: AppSettings = {
         ...DEFAULT_SETTINGS,
         ...loadedSettings,
         confirm_on_close: loadedSettings.confirm_on_close ?? true,
+        master_password_enabled: mpStatus.enabled && mpStatus.configured,
       };
-      set({ bookmarkTree: tree, settings: normalized });
       applySettingsToAllTerminals(normalized);
+
+      if (mpStatus.enabled && mpStatus.configured && !mpStatus.unlocked) {
+        set({
+          settings: normalized,
+          appLockState: 'locked',
+          masterPasswordEnabled: true,
+        });
+        return;
+      }
+
+      const tree = await transport.listBookmarkTree();
+      set({
+        bookmarkTree: tree,
+        settings: normalized,
+        appLockState: 'unlocked',
+        masterPasswordEnabled: mpStatus.enabled && mpStatus.configured,
+      });
     } catch (err) {
       console.warn('Initial load deferred:', err);
+      set({ appLockState: 'unlocked' });
     }
+  },
+
+  unlockWithMasterPassword: async (password) => {
+    const { transport } = get();
+    const ok = await transport.verifyMasterPassword(password);
+    if (!ok) return false;
+    const [tree, loadedSettings] = await Promise.all([
+      transport.listBookmarkTree(),
+      transport.getSettings(),
+    ]);
+    const normalized: AppSettings = {
+      ...DEFAULT_SETTINGS,
+      ...loadedSettings,
+      confirm_on_close: loadedSettings.confirm_on_close ?? true,
+      master_password_enabled: true,
+    };
+    set({
+      bookmarkTree: tree,
+      settings: normalized,
+      appLockState: 'unlocked',
+      masterPasswordEnabled: true,
+    });
+    applySettingsToAllTerminals(normalized);
+    return true;
+  },
+
+  setMasterPassword: async (newPassword, currentPassword) => {
+    await get().transport.setMasterPassword(newPassword, currentPassword ?? null);
+    set((s) => ({
+      masterPasswordEnabled: true,
+      settings: { ...s.settings, master_password_enabled: true },
+    }));
+  },
+
+  disableMasterPassword: async (currentPassword) => {
+    await get().transport.disableMasterPassword(currentPassword);
+    set((s) => ({
+      masterPasswordEnabled: false,
+      settings: { ...s.settings, master_password_enabled: false },
+    }));
   },
 
   openSessionTab: (title, config) => {
@@ -735,6 +807,30 @@ export const useAppStore = create<AppState>((set, get) => ({
         })),
       })),
     }));
+  },
+
+  setPaneEncoding: async (paneId, encoding) => {
+    let targetSessionId: SessionId | null = null;
+    set((s) => ({
+      tabs: s.tabs.map((t) => ({
+        ...t,
+        root: mapPane(t.root, paneId, (p) => {
+          if (p.sessionId !== null) targetSessionId = p.sessionId;
+          return {
+            ...p,
+            config: { ...p.config, encoding },
+          };
+        }),
+      })),
+    }));
+    if (targetSessionId !== null) {
+      await get().transport.setSessionEncoding(targetSessionId, encoding);
+    }
+  },
+
+  resetSavedSessions: async () => {
+    await get().transport.resetSavedSessions();
+    await get().refreshBookmarks();
   },
 
   setDraggingItem: (item) => set({ draggingItem: item }),
@@ -1111,6 +1207,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   openSaveBookmarkFromPane: (pane) => {
     let draft: SaveFromPaneDraft;
+    const encoding = pane.config.encoding ?? 'utf-8';
     if (pane.config.protocol === 'ssh') {
       const hostname = pane.detectedHostname?.trim();
       draft = {
@@ -1119,6 +1216,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         host: pane.config.host,
         port: pane.config.port,
         username: pane.config.username,
+        encoding,
       };
     } else if (pane.config.protocol === 'telnet') {
       draft = {
@@ -1126,6 +1224,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         name: pane.detectedHostname?.trim() || pane.config.host,
         host: pane.config.host,
         port: pane.config.port,
+        encoding,
       };
     } else if (pane.config.protocol === 'serial') {
       draft = {
@@ -1133,6 +1232,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         name: pane.config.port_name,
         serial_port: pane.config.port_name,
         baud_rate: pane.config.baud_rate,
+        encoding,
       };
     } else {
       draft = {
@@ -1140,6 +1240,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         name: pane.title,
         shell: pane.config.shell,
         cwd: pane.config.cwd,
+        encoding,
       };
     }
     set({
@@ -1190,6 +1291,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       username: prompt.username,
       auth: { auth_type: 'password', password },
       size: { cols: 100, rows: 30 },
+      encoding: 'utf-8',
     });
   },
 
