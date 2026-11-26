@@ -21,6 +21,7 @@ export const App: React.FC = () => {
     settings,
     initialize,
     openLocalTab,
+    cycleTab,
     openQuickSshModal,
     openSaveBookmarkFromPane,
     toggleZoneOpen,
@@ -110,6 +111,12 @@ export const App: React.FC = () => {
   // Global keyboard shortcuts
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && !e.altKey && !e.metaKey && e.key === 'Tab') {
+        e.preventDefault();
+        e.stopPropagation();
+        cycleTab(e.shiftKey ? -1 : 1);
+        return;
+      }
       if (e.key === 'F1') {
         e.preventDefault();
         openManual();
@@ -168,9 +175,10 @@ export const App: React.FC = () => {
       }
     };
 
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
+    window.addEventListener('keydown', onKeyDown, true);
+    return () => window.removeEventListener('keydown', onKeyDown, true);
   }, [
+    cycleTab,
     openManual,
     setSettingsOpen,
     openLocalTab,
