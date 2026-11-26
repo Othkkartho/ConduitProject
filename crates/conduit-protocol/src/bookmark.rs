@@ -27,6 +27,10 @@ pub struct PortForwardRule {
     pub target_port: Option<u16>,
 }
 
+pub fn default_encoding() -> String {
+    "utf-8".into()
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Bookmark {
     pub id: String,
@@ -43,6 +47,8 @@ pub struct Bookmark {
     pub auth_type: Option<String>, // "password" | "private_key"
     pub key_path: Option<String>,
     pub credential_id: Option<String>,
+    #[serde(default = "default_encoding")]
+    pub encoding: String,
     #[serde(default)]
     pub sort_order: i32,
     #[serde(default)]
@@ -136,7 +142,16 @@ pub struct AppSettings {
     pub scrollback: u32,
     #[serde(default = "default_confirm_on_close")]
     pub confirm_on_close: bool,
+    #[serde(default)]
+    pub master_password_enabled: bool,
     pub shortcuts: HashMap<String, String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MasterPasswordStatus {
+    pub enabled: bool,
+    pub configured: bool,
+    pub unlocked: bool,
 }
 
 impl Default for AppSettings {
@@ -166,6 +181,7 @@ impl Default for AppSettings {
             cursor_blink: true,
             scrollback: 10000,
             confirm_on_close: true,
+            master_password_enabled: false,
             shortcuts,
         }
     }
@@ -181,6 +197,7 @@ mod tests {
         assert_eq!(settings.theme, "catppuccin-mocha");
         assert_eq!(settings.font_size, 14);
         assert!(settings.confirm_on_close);
+        assert!(!settings.master_password_enabled);
         assert_eq!(
             settings.shortcuts.get("quick_connect").map(String::as_str),
             Some("Ctrl+Shift+E")

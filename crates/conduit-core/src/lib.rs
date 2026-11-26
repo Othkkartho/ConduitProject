@@ -1,5 +1,6 @@
 pub mod backend;
 pub mod backends;
+pub mod encoding;
 pub mod manager;
 pub mod stream;
 

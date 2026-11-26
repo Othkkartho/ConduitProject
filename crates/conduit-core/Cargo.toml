@@ -17,3 +17,4 @@ russh.workspace = true
 russh-keys.workspace = true
 russh-sftp.workspace = true
 tokio-serial.workspace = true
+encoding_rs.workspace = true
