@@ -16,6 +16,7 @@ import { getProtocolBadge, useAppStore } from '../store/useAppStore';
 import type {
   Bookmark,
   BookmarkPosition,
+  DragPayload,
   Folder,
   FolderPosition,
 } from '../types';
@@ -177,12 +178,11 @@ export const Sidebar: React.FC = () => {
 
   const handleDropOnFolder = async (
     target: Folder,
-    pos: 'before' | 'inside' | 'after'
+    pos: 'before' | 'inside' | 'after',
+    payload: DragPayload
   ) => {
-    if (!draggingItem) return;
-
-    if (draggingItem.kind === 'folder') {
-      const dragged = draggingItem.folder;
+    if (payload.kind === 'folder') {
+      const dragged = payload.folder;
       if (
         dragged.id === target.id ||
         isDescendantFolder(dragged.id, target.id)
@@ -228,8 +228,8 @@ export const Sidebar: React.FC = () => {
       return;
     }
 
-    if (draggingItem.kind === 'bookmark') {
-      const dragged = draggingItem.bookmark;
+    if (payload.kind === 'bookmark') {
+      const dragged = payload.bookmark;
       const destFolderId =
         pos === 'inside' ? target.id : target.parent_id ?? null;
       const siblings = bookmarkTree.bookmarks
@@ -260,12 +260,11 @@ export const Sidebar: React.FC = () => {
 
   const handleDropOnBookmark = async (
     target: Bookmark,
-    pos: 'before' | 'after'
+    pos: 'before' | 'after',
+    payload: DragPayload
   ) => {
-    if (!draggingItem) return;
-
-    if (draggingItem.kind === 'bookmark') {
-      const dragged = draggingItem.bookmark;
+    if (payload.kind === 'bookmark') {
+      const dragged = payload.bookmark;
       if (dragged.id === target.id) return;
       const destFolderId = target.folder_id ?? null;
       const siblings = bookmarkTree.bookmarks
@@ -294,8 +293,8 @@ export const Sidebar: React.FC = () => {
       return;
     }
 
-    if (draggingItem.kind === 'folder') {
-      const dragged = draggingItem.folder;
+    if (payload.kind === 'folder') {
+      const dragged = payload.folder;
       const destParent = target.folder_id ?? null;
       if (destParent && isDescendantFolder(dragged.id, destParent)) return;
       const siblings = (foldersByParent.get(destParent) ?? []).filter(
@@ -313,11 +312,9 @@ export const Sidebar: React.FC = () => {
     }
   };
 
-  const handleDropOnRoot = async () => {
-    if (!draggingItem) return;
-
-    if (draggingItem.kind === 'folder') {
-      const dragged = draggingItem.folder;
+  const handleDropOnRoot = async (payload: DragPayload) => {
+    if (payload.kind === 'folder') {
+      const dragged = payload.folder;
       const siblings = (foldersByParent.get(null) ?? []).filter(
         (f) => f.id !== dragged.id
       );
@@ -330,8 +327,8 @@ export const Sidebar: React.FC = () => {
         { id: dragged.id, parent_id: null, sort_order: siblings.length },
       ];
       await reorderBookmarkTree({ folders: folderPositions, bookmarks: [] });
-    } else if (draggingItem.kind === 'bookmark') {
-      const dragged = draggingItem.bookmark;
+    } else if (payload.kind === 'bookmark') {
+      const dragged = payload.bookmark;
       const siblings = bookmarkTree.bookmarks
         .filter((b) => (b.folder_id ?? null) === null && b.id !== dragged.id)
         .sort(
@@ -374,11 +371,40 @@ export const Sidebar: React.FC = () => {
           setDraggingItem(null);
           setDropHint(null);
         }}
-        onDragOver={(e) => {
-          if (!isTreeDrag) return;
+        onDragEnter={(e) => {
+          const payload = draggingItem ?? useAppStore.getState().draggingItem;
           if (
-            draggingItem?.kind === 'bookmark' &&
-            draggingItem.bookmark.id === bm.id
+            payload?.kind === 'folder' ||
+            (payload?.kind === 'bookmark' && payload.bookmark.id !== bm.id)
+          ) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        }}
+        onDragOver={(e) => {
+          const payload = draggingItem ?? useAppStore.getState().draggingItem;
+          if (
+            !payload ||
+            (payload.kind !== 'folder' && payload.kind !== 'bookmark')
+          ) {
+            return;
+          }
+          if (payload.kind === 'bookmark' && payload.bookmark.id === bm.id) {
+            return;
+          }
+          e.preventDefault();
+          e.stopPropagation();
+          e.dataTransfer.dropEffect = 'move';
+          const rect = e.currentTarget.getBoundingClientRect();
+          const pos =
+            e.clientY - rect.top < rect.height / 2 ? 'before' : 'after';
+          setDropHint({ kind: 'bookmark', id: bm.id, pos });
+        }}
+        onDrop={(e) => {
+          const payload = draggingItem ?? useAppStore.getState().draggingItem;
+          if (
+            !payload ||
+            (payload.kind !== 'folder' && payload.kind !== 'bookmark')
           ) {
             return;
           }
@@ -387,19 +413,9 @@ export const Sidebar: React.FC = () => {
           const rect = e.currentTarget.getBoundingClientRect();
           const pos =
             e.clientY - rect.top < rect.height / 2 ? 'before' : 'after';
-          setDropHint({ kind: 'bookmark', id: bm.id, pos });
-        }}
-        onDrop={(e) => {
-          if (!isTreeDrag) return;
-          e.preventDefault();
-          e.stopPropagation();
-          const pos =
-            dropHint?.kind === 'bookmark' && dropHint.id === bm.id
-              ? dropHint.pos
-              : 'after';
           setDropHint(null);
           setDraggingItem(null);
-          void handleDropOnBookmark(bm, pos);
+          void handleDropOnBookmark(bm, pos, payload);
         }}
       >
         <div
@@ -467,34 +483,77 @@ export const Sidebar: React.FC = () => {
             setDraggingItem(null);
             setDropHint(null);
           }}
+          onDragEnter={(e) => {
+            const payload = draggingItem ?? useAppStore.getState().draggingItem;
+            if (
+              !payload ||
+              (payload.kind !== 'folder' && payload.kind !== 'bookmark')
+            ) {
+              return;
+            }
+            if (
+              payload.kind === 'folder' &&
+              (payload.folder.id === folder.id ||
+                isDescendantFolder(payload.folder.id, folder.id))
+            ) {
+              return;
+            }
+            e.preventDefault();
+            e.stopPropagation();
+          }}
           onDragOver={(e) => {
-            if (!isTreeDrag) return;
-            if (draggingItem?.kind === 'folder') {
-              if (
-                draggingItem.folder.id === folder.id ||
-                isDescendantFolder(draggingItem.folder.id, folder.id)
-              ) {
-                return;
-              }
+            const payload = draggingItem ?? useAppStore.getState().draggingItem;
+            if (
+              !payload ||
+              (payload.kind !== 'folder' && payload.kind !== 'bookmark')
+            ) {
+              return;
+            }
+            if (
+              payload.kind === 'folder' &&
+              (payload.folder.id === folder.id ||
+                isDescendantFolder(payload.folder.id, folder.id))
+            ) {
+              return;
+            }
+            e.preventDefault();
+            e.stopPropagation();
+            e.dataTransfer.dropEffect = 'move';
+            const rect = e.currentTarget.getBoundingClientRect();
+            const ry = (e.clientY - rect.top) / Math.max(1, rect.height);
+            const pos =
+              payload.kind === 'bookmark'
+                ? 'inside'
+                : ry < 0.22
+                  ? 'before'
+                  : ry > 0.78
+                    ? 'after'
+                    : 'inside';
+            setDropHint({ kind: 'folder', id: folder.id, pos });
+          }}
+          onDrop={(e) => {
+            const payload = draggingItem ?? useAppStore.getState().draggingItem;
+            if (
+              !payload ||
+              (payload.kind !== 'folder' && payload.kind !== 'bookmark')
+            ) {
+              return;
             }
             e.preventDefault();
             e.stopPropagation();
             const rect = e.currentTarget.getBoundingClientRect();
             const ry = (e.clientY - rect.top) / Math.max(1, rect.height);
-            const pos = ry < 0.25 ? 'before' : ry > 0.75 ? 'after' : 'inside';
-            setDropHint({ kind: 'folder', id: folder.id, pos });
-          }}
-          onDrop={(e) => {
-            if (!isTreeDrag) return;
-            e.preventDefault();
-            e.stopPropagation();
             const pos =
-              dropHint?.kind === 'folder' && dropHint.id === folder.id
-                ? dropHint.pos
-                : 'inside';
+              payload.kind === 'bookmark'
+                ? 'inside'
+                : ry < 0.22
+                  ? 'before'
+                  : ry > 0.78
+                    ? 'after'
+                    : 'inside';
             setDropHint(null);
             setDraggingItem(null);
-            void handleDropOnFolder(folder, pos);
+            void handleDropOnFolder(folder, pos, payload);
           }}
           onContextMenu={(e) => {
             e.preventDefault();
@@ -615,9 +674,13 @@ export const Sidebar: React.FC = () => {
         className={`sidebar-tree ${
           dropHint?.kind === 'root' ? 'tree-drop-root' : ''
         }`}
+        onDragEnter={(e) => {
+          if (isTreeDrag) e.preventDefault();
+        }}
         onDragOver={(e) => {
           if (!isTreeDrag) return;
           e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
           setDropHint({ kind: 'root' });
         }}
         onDragLeave={(e) => {
@@ -626,11 +689,17 @@ export const Sidebar: React.FC = () => {
           }
         }}
         onDrop={(e) => {
-          if (!isTreeDrag) return;
+          const payload = draggingItem ?? useAppStore.getState().draggingItem;
+          if (
+            !payload ||
+            (payload.kind !== 'folder' && payload.kind !== 'bookmark')
+          ) {
+            return;
+          }
           e.preventDefault();
           setDropHint(null);
           setDraggingItem(null);
-          void handleDropOnRoot();
+          void handleDropOnRoot(payload);
         }}
         onContextMenu={(e) => {
           e.preventDefault();

@@ -416,6 +416,8 @@ textarea:focus {
   padding: 5px 6px;
   border-radius: 6px;
   gap: 6px;
+  user-select: none;
+  cursor: grab;
 }
 
 .folder-row:hover,
@@ -656,6 +658,10 @@ textarea:focus {
   min-height: 0;
   padding: 4px;
   overflow: hidden;
+}
+
+.pane-wrapper.drag-active .pane-xterm {
+  pointer-events: none;
 }
 
 /* Drag-to-Split Drop Overlays */
