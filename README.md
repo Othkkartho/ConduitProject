@@ -72,7 +72,7 @@ conduit/
 │   └── conduit-storage/        # SQLite 북마크/설정/known_hosts + Keyring AES-256-GCM Vault
 ├── apps/
 │   ├── desktop/                # Tauri v2 데스크톱 앱 호스트 (네이티브 메뉴 포함)
-│   └── uninstaller/            # Windows 포터블 제거 도구 (uninstall.exe)
+│   └── manager/                # 크로스 플랫폼 업데이트/제거 도구 (conduit-manager)
 └── frontend/                   # React + TypeScript + Zustand + xterm.js UI
 ```
 
@@ -96,9 +96,9 @@ conduit/
 
 ### 방법 1. 릴리즈 아카이브 다운로드 후 바로 실행 (권장)
 GitHub [Releases](../../releases) 페이지에서 OS에 맞는 압축 파일을 받아 압축을 해제한 뒤 실행 파일을 바로 실행하면 됩니다.
-- **Windows (`x86_64`)**: `.zip` 압축 해제 후 `conduit.exe` 실행 (제거 시 `uninstall.exe` 실행 시 DB 및 설치 폴더 삭제)
-- **macOS (`arm64`)**: `.tar.gz` 또는 `.zip` 압축 해제 후 `Conduit Terminal.app` 실행 (최초 실행 시 Gatekeeper 경고가 뜨면 `xattr -cr "Conduit Terminal.app"` 실행)
-- **Linux (`x86_64`)**: `.tar.gz` 압축 해제 후 `./conduit` 실행 (시스템에 `libwebkit2gtk-4.1` 필요)
+- **Windows (`x86_64`)**: `.zip` 압축 해제 후 `conduit.exe` 실행 (업데이트 `1` / 제거 `2` -> `y`: `conduit-manager.exe`)
+- **macOS (`arm64`)**: `.tar.gz` 또는 `.zip` 압축 해제 후 `Conduit Terminal.app` 실행 (최초 실행 시 Gatekeeper 경고가 뜨면 `xattr -cr "Conduit Terminal.app"` 실행, 업데이트/제거: `./conduit-manager`)
+- **Linux (`x86_64`)**: `.tar.gz` 압축 해제 후 `./conduit` 실행 (시스템에 `libwebkit2gtk-4.1` 필요, 업데이트/제거: `./conduit-manager`)
 
 ### 방법 2. 소스에서 직접 빌드 및 실행
 

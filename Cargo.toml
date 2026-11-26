@@ -5,7 +5,7 @@ members = [
     "crates/conduit-storage",
     "crates/conduit-core",
     "apps/desktop/src-tauri",
-    "apps/uninstaller",
+    "apps/manager",
 ]
 
 [workspace.package]
