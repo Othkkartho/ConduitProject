@@ -4,6 +4,7 @@ import { BookmarkTransferModal } from './components/BookmarkTransferModal';
 import { ConfirmCloseModal } from './components/ConfirmCloseModal';
 import { ConfirmDeleteModal } from './components/ConfirmDeleteModal';
 import { BottomPanel, SidePanel } from './components/DockPanels';
+import { MasterPasswordLockScreen } from './components/MasterPasswordLockScreen';
 import { QuickConnectModal } from './components/QuickConnectModal';
 import { SettingsModal } from './components/SettingsModal';
 import { SplitLayout } from './components/SplitLayout';
@@ -19,6 +20,7 @@ export const App: React.FC = () => {
     tabs,
     activeTabId,
     settings,
+    appLockState,
     initialize,
     openLocalTab,
     cycleTab,
@@ -58,6 +60,7 @@ export const App: React.FC = () => {
     let cleanup: (() => void) | undefined;
     void transport
       .onHostMenuEvent((event) => {
+        if (useAppStore.getState().appLockState !== 'unlocked') return;
         switch (event) {
           case 'open-user-manual':
             openManual();
@@ -110,6 +113,7 @@ export const App: React.FC = () => {
 
   // Global keyboard shortcuts
   useEffect(() => {
+    if (appLockState !== 'unlocked') return;
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey && !e.altKey && !e.metaKey && e.key === 'Tab') {
         e.preventDefault();
@@ -178,6 +182,7 @@ export const App: React.FC = () => {
     window.addEventListener('keydown', onKeyDown, true);
     return () => window.removeEventListener('keydown', onKeyDown, true);
   }, [
+    appLockState,
     cycleTab,
     openManual,
     setSettingsOpen,
@@ -189,6 +194,14 @@ export const App: React.FC = () => {
     getActivePane,
     toggleSearchPane,
   ]);
+
+  if (appLockState === 'checking') {
+    return <div className="lock-screen" />;
+  }
+
+  if (appLockState === 'locked') {
+    return <MasterPasswordLockScreen />;
+  }
 
   const activeTab = tabs.find((t) => t.id === activeTabId) ?? null;
 

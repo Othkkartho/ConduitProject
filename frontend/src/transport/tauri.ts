@@ -9,6 +9,7 @@ import type {
   Folder,
   HostMenuEvent,
   ImportMode,
+  MasterPasswordStatus,
   SessionConfig,
   SessionId,
   SftpEntry,
@@ -59,6 +60,24 @@ export class TauriTransport implements AppTransport {
 
   async close(sessionId: SessionId): Promise<void> {
     await invoke('close_session', { sessionId });
+  }
+
+  async setSessionEncoding(sessionId: SessionId, encoding: string): Promise<void> {
+    await invoke('set_session_encoding', { sessionId, encoding });
+  }
+
+  async testSessionConnection(
+    config: SessionConfig,
+    fallbackBookmarkId?: string | null
+  ): Promise<void> {
+    await invoke('test_session_connection', {
+      config,
+      fallbackBookmarkId: fallbackBookmarkId ?? null,
+    });
+  }
+
+  async resetSavedSessions(): Promise<void> {
+    await invoke('reset_saved_sessions');
   }
 
   async listBookmarkTree(): Promise<BookmarkTree> {
@@ -116,6 +135,28 @@ export class TauriTransport implements AppTransport {
 
   async saveSettings(settings: AppSettings): Promise<void> {
     await invoke('save_settings', { settings });
+  }
+
+  async getMasterPasswordStatus(): Promise<MasterPasswordStatus> {
+    return invoke<MasterPasswordStatus>('get_master_password_status');
+  }
+
+  async verifyMasterPassword(password: string): Promise<boolean> {
+    return invoke<boolean>('verify_master_password', { password });
+  }
+
+  async setMasterPassword(
+    newPassword: string,
+    currentPassword?: string | null
+  ): Promise<void> {
+    await invoke('set_master_password', {
+      newPassword,
+      currentPassword: currentPassword ?? null,
+    });
+  }
+
+  async disableMasterPassword(currentPassword: string): Promise<void> {
+    await invoke('disable_master_password', { currentPassword });
   }
 
   async listSerialPorts(): Promise<string[]> {

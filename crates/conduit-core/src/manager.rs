@@ -6,18 +6,22 @@ use crate::backends::{
     ssh::SshBackend,
     telnet::TelnetBackend,
 };
+use crate::encoding::{encode_input, resolve_encoding, StreamDecoder};
 use crate::stream::{run_output_pump, FlowController};
 use bytes::Bytes;
 use conduit_protocol::{SessionConfig, SessionId, SessionInfo, SftpEntry, TerminalSize};
 use dashmap::DashMap;
+use encoding_rs::Encoding;
 use std::sync::atomic::{AtomicU32, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
+use std::time::Duration;
 use tokio::sync::mpsc;
 
 struct SessionEntry {
     info: SessionInfo,
     backend: Arc<dyn SessionBackend>,
     flow: Arc<FlowController>,
+    encoding: Arc<RwLock<&'static Encoding>>,
 }
 
 pub struct SessionManager {
@@ -36,7 +40,7 @@ impl SessionManager {
     pub async fn create_session<F>(
         &self,
         config: SessionConfig,
-        on_output: F,
+        mut on_output: F,
     ) -> Result<SessionId, SessionError>
     where
         F: FnMut(Bytes) -> bool + Send + 'static,
@@ -44,9 +48,11 @@ impl SessionManager {
         let id = self.next_id.fetch_add(1, Ordering::Relaxed);
         let (raw_tx, raw_rx) = mpsc::channel::<Bytes>(128);
         let flow = FlowController::new();
+        let initial_enc = resolve_encoding(config.encoding());
+        let enc_state = Arc::new(RwLock::new(initial_enc));
 
         let (protocol, label, backend): (String, String, Arc<dyn SessionBackend>) = match config {
-            SessionConfig::LocalPty { shell, cwd, size } => {
+            SessionConfig::LocalPty { shell, cwd, size, .. } => {
                 let lbl = shell
                     .clone()
                     .unwrap_or_else(|| if cfg!(windows) { "PowerShell" } else { "Local Shell" }.into());
@@ -59,6 +65,7 @@ impl SessionManager {
                 username,
                 auth,
                 size,
+                ..
             } => {
                 let lbl = format!("{username}@{host}:{port}");
                 let b = SshBackend::connect(host, port, username, auth, size, raw_tx).await?;
@@ -86,11 +93,87 @@ impl SessionManager {
                 },
                 backend,
                 flow: Arc::clone(&flow),
+                encoding: Arc::clone(&enc_state),
             },
         );
 
-        tokio::spawn(run_output_pump(raw_rx, flow, on_output));
+        let mut decoder = StreamDecoder::new(initial_enc);
+        let enc_reader = Arc::clone(&enc_state);
+        tokio::spawn(run_output_pump(raw_rx, flow, move |chunk| {
+            let target_enc = *enc_reader.read().unwrap_or_else(|e| e.into_inner());
+            decoder.set_encoding(target_enc);
+            let decoded = decoder.decode_chunk(chunk);
+            if decoded.is_empty() {
+                return true;
+            }
+            on_output(decoded)
+        }));
         Ok(id)
+    }
+
+    pub fn set_encoding(&self, id: SessionId, label: &str) -> Result<(), SessionError> {
+        let entry = self.sessions.get(&id).ok_or(SessionError::NotFound(id))?;
+        let enc = resolve_encoding(label);
+        let mut guard = entry.encoding.write().unwrap_or_else(|e| e.into_inner());
+        *guard = enc;
+        Ok(())
+    }
+
+    /// Verifies that a session configuration can actually connect before saving or opening.
+    pub async fn test_connection(config: SessionConfig) -> Result<(), SessionError> {
+        tokio::time::timeout(Duration::from_secs(8), async move {
+            match config {
+                SessionConfig::Ssh {
+                    host,
+                    port,
+                    username,
+                    auth,
+                    ..
+                } => {
+                    if host.trim().is_empty() {
+                        return Err(SessionError::Ssh("호스트 주소를 입력해 주세요.".into()));
+                    }
+                    SshBackend::test_connect(host, port, username, auth).await
+                }
+                SessionConfig::Telnet(cfg) => {
+                    if cfg.host.trim().is_empty() {
+                        return Err(SessionError::Telnet("호스트 주소를 입력해 주세요.".into()));
+                    }
+                    tokio::net::TcpStream::connect((cfg.host.as_str(), cfg.port))
+                        .await
+                        .map(|_| ())
+                        .map_err(|e| SessionError::Telnet(e.to_string()))
+                }
+                SessionConfig::Serial(cfg) => {
+                    if cfg.port_name.trim().is_empty() {
+                        return Err(SessionError::Serial("시리얼 포트를 입력해 주세요.".into()));
+                    }
+                    use tokio_serial::SerialPortBuilderExt;
+                    let _stream = tokio_serial::new(&cfg.port_name, cfg.baud_rate)
+                        .open_native_async()
+                        .map_err(|e| SessionError::Serial(e.to_string()))?;
+                    Ok(())
+                }
+                SessionConfig::LocalPty { shell, cwd, size, .. } => {
+                    if let Some(ref dir) = cwd {
+                        if !dir.trim().is_empty() && !std::path::Path::new(dir.trim()).is_dir() {
+                            return Err(SessionError::Pty(format!(
+                                "시작 디렉토리가 존재하지 않습니다: {dir}"
+                            )));
+                        }
+                    }
+                    let (tx, _rx) = mpsc::channel(4);
+                    let backend = PtyBackend::spawn(shell, cwd, size, tx)?;
+                    let _ = backend.close().await;
+                    Ok(())
+                }
+            }
+        })
+        .await
+        .map_err(|_| SessionError::Io(std::io::Error::new(
+            std::io::ErrorKind::TimedOut,
+            "연결 확인 시간이 초과되었습니다 (8초).",
+        )))?
     }
 
     pub fn list_sessions(&self) -> Vec<SessionInfo> {
@@ -102,12 +185,16 @@ impl SessionManager {
     }
 
     pub async fn write(&self, id: SessionId, data: Bytes) -> Result<(), SessionError> {
-        let backend = self
+        let (backend, enc) = self
             .sessions
             .get(&id)
-            .map(|e| Arc::clone(&e.backend))
+            .map(|e| {
+                let enc = *e.encoding.read().unwrap_or_else(|err| err.into_inner());
+                (Arc::clone(&e.backend), enc)
+            })
             .ok_or(SessionError::NotFound(id))?;
-        backend.write(data).await
+        let wire = encode_input(enc, data);
+        backend.write(wire).await
     }
 
     /// Zero-copy broadcast fan-out using `Bytes::clone`
@@ -115,7 +202,8 @@ impl SessionManager {
         for &id in ids {
             if let Some(entry) = self.sessions.get(&id) {
                 let backend = Arc::clone(&entry.backend);
-                let payload = data.clone();
+                let enc = *entry.encoding.read().unwrap_or_else(|err| err.into_inner());
+                let payload = encode_input(enc, data.clone());
                 tokio::spawn(async move {
                     let _ = backend.write(payload).await;
                 });

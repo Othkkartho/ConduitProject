@@ -154,6 +154,50 @@ impl SshBackend {
         })
     }
 
+    /// Tests SSH connectivity and authentication without opening a persistent PTY channel.
+    pub async fn test_connect(
+        host: String,
+        port: u16,
+        username: String,
+        auth: SshAuth,
+    ) -> Result<(), SessionError> {
+        let config = Arc::new(client::Config {
+            inactivity_timeout: Some(Duration::from_secs(10)),
+            ..Default::default()
+        });
+
+        let mut handle = client::connect(config, (host.as_str(), port), SshClientHandler)
+            .await
+            .map_err(|e| SessionError::Ssh(e.to_string()))?;
+
+        let authenticated = match auth {
+            SshAuth::Password { password } => handle
+                .authenticate_password(username, password)
+                .await
+                .map_err(|e| SessionError::Ssh(e.to_string()))?,
+            SshAuth::PrivateKey {
+                key_path,
+                passphrase,
+            } => {
+                let key_pair = russh_keys::load_secret_key(key_path, passphrase.as_deref())
+                    .map_err(|e| SessionError::Ssh(e.to_string()))?;
+                handle
+                    .authenticate_publickey(username, Arc::new(key_pair))
+                    .await
+                    .map_err(|e| SessionError::Ssh(e.to_string()))?
+            }
+        };
+
+        let _ = handle
+            .disconnect(russh::Disconnect::ByApplication, "", "en")
+            .await;
+
+        if !authenticated {
+            return Err(SessionError::Ssh("SSH authentication failed".into()));
+        }
+        Ok(())
+    }
+
     /// Starts a local TCP port forward multiplexed over the active SSH connection.
     pub async fn start_local_forward(
         &self,

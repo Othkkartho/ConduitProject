@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import '@xterm/xterm/css/xterm.css';
 import { BookmarkPlus, GripVertical, Search, X } from 'lucide-react';
+import { DEFAULT_ENCODING, ENCODING_OPTIONS } from '../constants/encodings';
 import {
   canDropOnPane,
   getProtocolBadge,
@@ -55,6 +56,7 @@ export const TerminalPane: React.FC<TerminalPaneProps> = ({ tabId, pane }) => {
     setActivePane,
     setPaneSession,
     setPaneDetectedHostname,
+    setPaneEncoding,
     openSaveBookmarkFromPane,
     requestClosePane,
     toggleSearchPane,
@@ -230,6 +232,20 @@ export const TerminalPane: React.FC<TerminalPaneProps> = ({ tabId, pane }) => {
         </div>
 
         <div className="pane-actions">
+          <select
+            className="pane-encoding-select"
+            value={pane.config.encoding ?? DEFAULT_ENCODING}
+            title="세션 문자 인코딩"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+            onChange={(e) => void setPaneEncoding(pane.id, e.target.value)}
+          >
+            {ENCODING_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.value.toUpperCase()}
+              </option>
+            ))}
+          </select>
           <button
             className="icon-btn"
             style={{ padding: 3 }}

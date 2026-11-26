@@ -4,6 +4,7 @@ use commands::AppState;
 use conduit_core::SessionManager;
 use conduit_storage::StorageRepository;
 use std::path::PathBuf;
+use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use tauri::menu::{MenuBuilder, MenuItemBuilder, SubmenuBuilder};
 use tauri::{Emitter, Manager};
@@ -27,8 +28,16 @@ pub fn run() {
                 StorageRepository::open(&db_path)
                     .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?,
             );
+            let mp_status = storage
+                .get_master_password_status()
+                .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
+            let initially_unlocked = !(mp_status.enabled && mp_status.configured);
             let sessions = SessionManager::new();
-            app.manage(AppState { sessions, storage });
+            app.manage(AppState {
+                sessions,
+                storage,
+                unlocked: AtomicBool::new(initially_unlocked),
+            });
 
             let view_left = MenuItemBuilder::with_id("toggle_left_sidebar", "좌측 사이드바 토글")
                 .accelerator("CmdOrCtrl+B")
@@ -127,6 +136,9 @@ pub fn run() {
             commands::resize_session,
             commands::ack_session,
             commands::close_session,
+            commands::set_session_encoding,
+            commands::test_session_connection,
+            commands::reset_saved_sessions,
             commands::list_bookmark_tree,
             commands::upsert_folder,
             commands::delete_folder,
@@ -138,6 +150,10 @@ pub fn run() {
             commands::build_config_from_bookmark,
             commands::get_settings,
             commands::save_settings,
+            commands::get_master_password_status,
+            commands::verify_master_password,
+            commands::set_master_password,
+            commands::disable_master_password,
             commands::list_serial_ports,
             commands::sftp_list_dir,
             commands::sftp_download,

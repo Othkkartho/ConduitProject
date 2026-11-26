@@ -40,6 +40,18 @@ impl Default for SerialParity {
     }
 }
 
+fn default_data_bits() -> u8 {
+    8
+}
+
+fn default_stop_bits() -> u8 {
+    1
+}
+
+fn default_encoding() -> String {
+    "utf-8".into()
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SerialConfig {
     pub port_name: String,
@@ -50,14 +62,8 @@ pub struct SerialConfig {
     pub parity: SerialParity,
     #[serde(default = "default_stop_bits")]
     pub stop_bits: u8,
-}
-
-fn default_data_bits() -> u8 {
-    8
-}
-
-fn default_stop_bits() -> u8 {
-    1
+    #[serde(default = "default_encoding")]
+    pub encoding: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -65,6 +71,8 @@ pub struct TelnetConfig {
     pub host: String,
     pub port: u16,
     pub size: TerminalSize,
+    #[serde(default = "default_encoding")]
+    pub encoding: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -74,6 +82,8 @@ pub enum SessionConfig {
         shell: Option<String>,
         cwd: Option<String>,
         size: TerminalSize,
+        #[serde(default = "default_encoding")]
+        encoding: String,
     },
     Ssh {
         host: String,
@@ -81,9 +91,22 @@ pub enum SessionConfig {
         username: String,
         auth: SshAuth,
         size: TerminalSize,
+        #[serde(default = "default_encoding")]
+        encoding: String,
     },
     Serial(SerialConfig),
     Telnet(TelnetConfig),
+}
+
+impl SessionConfig {
+    pub fn encoding(&self) -> &str {
+        match self {
+            SessionConfig::LocalPty { encoding, .. }
+            | SessionConfig::Ssh { encoding, .. } => encoding,
+            SessionConfig::Serial(cfg) => &cfg.encoding,
+            SessionConfig::Telnet(cfg) => &cfg.encoding,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -5,10 +5,11 @@ members = [
     "crates/conduit-storage",
     "crates/conduit-core",
     "apps/desktop/src-tauri",
+    "apps/manager",
 ]
 
 [workspace.package]
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 license = "MIT"
 
@@ -32,6 +33,7 @@ russh = "0.45"
 russh-keys = "0.45"
 russh-sftp = "2.0"
 tokio-serial = "5.4"
+encoding_rs = "0.8"
 
 # Storage & Security
 rusqlite = { version = "0.32", features = ["bundled"] }
@@ -39,6 +41,9 @@ aes-gcm = "0.10"
 rand = "0.8"
 base64 = "0.22"
 zeroize = { version = "1.8", features = ["derive"] }
+pbkdf2 = { version = "0.12", default-features = false, features = ["hmac"] }
+sha2 = "0.10"
+subtle = "2"
 
 # Application Frameworks
 tauri = { version = "2", features = [] }

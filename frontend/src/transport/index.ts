@@ -7,6 +7,7 @@ import type {
   Folder,
   HostMenuEvent,
   ImportMode,
+  MasterPasswordStatus,
   SessionConfig,
   SessionId,
   SftpEntry,
@@ -26,6 +27,12 @@ export interface AppTransport {
   resize(sessionId: SessionId, size: TerminalSize): Promise<void>;
   ack(sessionId: SessionId, bytes: number): void;
   close(sessionId: SessionId): Promise<void>;
+  setSessionEncoding(sessionId: SessionId, encoding: string): Promise<void>;
+  testSessionConnection(
+    config: SessionConfig,
+    fallbackBookmarkId?: string | null
+  ): Promise<void>;
+  resetSavedSessions(): Promise<void>;
 
   // Bookmarks, Folders & Settings
   listBookmarkTree(): Promise<BookmarkTree>;
@@ -42,6 +49,10 @@ export interface AppTransport {
   buildConfigFromBookmark(bookmarkId: string, size: TerminalSize): Promise<SessionConfig>;
   getSettings(): Promise<AppSettings>;
   saveSettings(settings: AppSettings): Promise<void>;
+  getMasterPasswordStatus(): Promise<MasterPasswordStatus>;
+  verifyMasterPassword(password: string): Promise<boolean>;
+  setMasterPassword(newPassword: string, currentPassword?: string | null): Promise<void>;
+  disableMasterPassword(currentPassword: string): Promise<void>;
 
   // Serial & SFTP
   listSerialPorts(): Promise<string[]>;

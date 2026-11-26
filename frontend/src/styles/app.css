@@ -637,6 +637,17 @@ textarea:focus {
   gap: 3px;
 }
 
+.pane-encoding-select {
+  height: 20px;
+  padding: 0 4px;
+  font-size: 11px;
+  border-radius: 4px;
+  background: var(--bg-base);
+  color: var(--text-muted);
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+}
+
 .pane-search-bar {
   display: flex;
   align-items: center;
@@ -992,6 +1003,34 @@ textarea:focus {
   border-radius: 6px;
 }
 
+.btn-danger:disabled,
+.btn-primary:disabled,
+.btn-secondary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.modal-error-banner {
+  padding: 9px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--danger);
+  background: rgba(243, 139, 168, 0.14);
+  color: var(--danger);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.danger-zone-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--danger);
+  background: rgba(243, 139, 168, 0.06);
+}
+
 .form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1088,6 +1127,7 @@ textarea:focus {
   width: 14px;
   height: 14px;
   border-radius: 999px;
+  border: 1px solid var(--border-color);
 }
 
 .empty-state {
@@ -1098,4 +1138,69 @@ textarea:focus {
   height: 100%;
   gap: 12px;
   color: var(--text-muted);
+}
+
+.master-pw-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-elevated);
+}
+
+.status-pill {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+}
+
+.status-pill.on {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(137, 180, 250, 0.12);
+}
+
+.lock-screen {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  padding: 24px;
+}
+
+.lock-card {
+  width: min(440px, 100%);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+}
+
+.lock-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.lock-icon-badge {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(137, 180, 250, 0.16);
+  color: var(--accent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
