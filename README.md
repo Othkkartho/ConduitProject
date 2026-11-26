@@ -1,6 +1,6 @@
-# Conduit — Hybrid Multi-Protocol Terminal Emulator & Session Manager
+# Conduit — Multi-Protocol Desktop Terminal Emulator & Session Manager
 
-Rust(`tokio` + `portable-pty` + `russh` + `russh-sftp` + `tokio-serial`) 기반의 고성능 코어 엔진을 **Tauri v2 데스크톱 앱(Windows/macOS/Linux)** 과 **Axum 웹 서버(WebSocket)** 양쪽에서 그대로 재사용하는 하이브리드 터미널 에뮬레이터 및 세션 매니저입니다.
+Rust(`tokio` + `portable-pty` + `russh` + `russh-sftp` + `tokio-serial`) 기반의 고성능 코어 엔진과 **Tauri v2 데스크톱 앱(Windows/macOS/Linux)** 으로 구동되는 멀티 프로토콜 터미널 에뮬레이터 및 세션 매니저입니다.
 
 ---
 
@@ -8,21 +8,21 @@ Rust(`tokio` + `portable-pty` + `russh` + `russh-sftp` + `tokio-serial`) 기반�
 
 - **멀티 프로토콜 세션 관리**
   - **Local PTY**: Windows PowerShell / CMD, macOS Zsh, Linux Bash 등 네이티브 PTY (`portable-pty`)
-  - **SSH**: 비밀번호 및 개인키(Passphrase 지원) 인증, Keepalive, 포트 포워딩 인프라 (`russh`, `russh-keys`)
+  - **SSH**: 비밀번호 및 개인키(Passphrase 지원) 인증, Keepalive, 포트 포워딩 인프라 (`russh`, `russh-keys`), 간편 SSH 연결(`Ctrl+Shift+E`)
   - **SFTP**: 동일 SSH 연결 위에서 멀티플렉싱되는 GUI 파일 탐색기 — 드래그 앤 드롭 업로드, 다운로드, 폴더 생성, 삭제 (`russh-sftp`)
   - **Serial**: 로컬 시리얼 포트 자동 열거 및 Baud rate / Parity 설정 접속 (`tokio-serial`)
   - **Telnet**: RFC 854 IAC 협상 및 NAWS 창 크기 동기화 지원 (`tokio::net`)
-- **탭 & 재귀적 화면 분할(Split Pane) & Broadcast**
-  - 멀티 탭, 수평/수직 무한 화면 분할, 드래그 리사이즈 스플리터
-  - **Broadcast(동시 입력)**: 선택한 여러 세션에 입력 바이트를 Zero-Copy(`Bytes::clone`)로 동시 전송
-- **폴더 트리 북마크 & OS 키체인 암호화 볼트**
-  - SQLite 기반 계층형 폴더 트리 북마크(드래그 순서/폴더 이동, 삭제 확인, JSON Import/Export), 앱 설정, SSH `known_hosts` (TOFU) 저장 (`rusqlite`)
+- **탭 & 최대 2×2 드래그 화면 분할(Split Pane) & 하단 Broadcast**
+  - 멀티 탭, 패인/탭/북마크 드래그 자동 분할(최대 2×2), 드래그 리사이즈 스플리터
+  - **하단 Broadcast 입력 (`Ctrl+Shift+M`)**: 전체 세션 / 현재 화면 세션 / 선택된 세션 3가지 모드로 Zero-Copy(`Bytes::clone`) 명령 전송
+- **VS Code 스타일 Activity Bar & 중첩 폴더 트리 북마크**
+  - 좌/우/하단 패널 토글 및 아이콘 드래그 패널 재배치, 리사이즈
+  - SQLite 기반 다단계 폴더 트리 북마크(드래그 순서/폴더 이동, 삭제·종료 확인, JSON Import/Export), 앱 설정, SSH `known_hosts` (TOFU) 저장 (`rusqlite`)
   - OS 기본 키체인(`keyring`)에 256-bit 마스터 키 1개만 보관하고 각 자격 증명은 `AES-256-GCM`으로 암호화하는 **Envelope Encryption**
-  - 개인 로컬 서버/PC 구동을 기본으로 하여 웹 서버(`conduit-web`)의 접근 제어는 기본 비활성화(`access_control: false`, 추후 개발 예정)입니다.
 - **커스터마이징 & 내장 사용자 매뉴얼**
   - 5종 내장 컬러 스킴(Catppuccin Mocha, Tokyo Night, Dracula, One Dark Pro, Solarized Light)
-  - Nerd Fonts 및 폰트 합자(Ligatures), 커서 스타일, 스크롤백, 단축키 안내
-  - **앱/웹 내장 사용자 매뉴얼**: 상단 바 `매뉴얼 (F1)` 버튼 또는 데스크톱 네이티브 메뉴(`도움말 -> 사용자 매뉴얼`)로 언제든 확인 가능
+  - Nerd Fonts 및 폰트 합자(Ligatures), 커서 스타일, 스크롤백, 세션 종료 확인 설정
+  - **앱 내장 사용자 매뉴얼**: 상단 바 `매뉴얼 (F1)` 버튼 또는 네이티브 메뉴(`도움말 -> 사용자 매뉴얼`)로 언제든 확인 가능
 
 ---
 
@@ -31,35 +31,27 @@ Rust(`tokio` + `portable-pty` + `russh` + `russh-sftp` + `tokio-serial`) 기반�
 ```mermaid
 flowchart TB
     subgraph Frontend["Frontend (React + TypeScript + Zustand + xterm.js)"]
-        UI["UI Layer (Tabs / Split Panes / SFTP / Manual)"]
+        UI["UI Layer (Tabs / Split Panes / ActivityBar / SFTP / Manual)"]
         Xterm["xterm.js (WebGL / Fit / Search / WebLinks)"]
-        Transport["AppTransport Adapter"]
-        TauriAdapter["TauriTransport (IPC + Binary Channel)"]
-        WsAdapter["WebSocketTransport (REST + Binary WS)"]
+        Transport["TauriTransport (IPC + Binary Channel)"]
 
         UI --> Xterm
         Xterm <--> Transport
-        Transport --> TauriAdapter
-        Transport --> WsAdapter
     end
 
-    subgraph Hosts["Application Host Layer"]
-        Desktop["apps/desktop (Tauri v2)"]
-        Web["apps/web (Axum HTTP + WS)"]
+    subgraph Desktop["Application Host Layer"]
+        TauriHost["apps/desktop (Tauri v2 Native Window + Menu)"]
     end
 
     subgraph Workspace["Shared Rust Core"]
-        Protocol["conduit-protocol (DTO / Binary Framing)"]
+        Protocol["conduit-protocol (DTO)"]
         Core["conduit-core (SessionManager / Adaptive Coalescer / Backends)"]
         Storage["conduit-storage (SQLite + Keyring + AES-256-GCM)"]
     end
 
-    TauriAdapter <==>|"Tauri v2 Binary IPC"| Desktop
-    WsAdapter <==>|"REST + Binary WS Frame"| Web
-    Desktop --> Core
-    Desktop --> Storage
-    Web --> Core
-    Web --> Storage
+    Transport <==>|"Tauri v2 Binary IPC Channel"| TauriHost
+    TauriHost --> Core
+    TauriHost --> Storage
     Core --> Protocol
     Storage --> Protocol
 ```
@@ -71,15 +63,16 @@ flowchart TB
 ```text
 conduit/
 ├── Cargo.toml                  # Cargo Workspace 루트
+├── .github/workflows/          # CI 테스트/체크 및 OS별 포터블 릴리즈 빌드
+├── scripts/                    # Tauri 데스크톱 아이콘 생성 스크립트
 ├── docs/                       # 아키텍처, 스트리밍, 보안, 사용자 매뉴얼 문서
 ├── crates/
-│   ├── conduit-protocol/       # 공통 DTO, 세션 설정, 5바이트 바이너리 프레이밍 규약
+│   ├── conduit-protocol/       # 공통 DTO, 세션/북마크/SFTP/설정 모델
 │   ├── conduit-core/           # SessionManager, Adaptive Coalescer, PTY/SSH/SFTP/Serial/Telnet
 │   └── conduit-storage/        # SQLite 북마크/설정/known_hosts + Keyring AES-256-GCM Vault
 ├── apps/
-│   ├── desktop/                # Tauri v2 데스크톱 앱 호스트 (네이티브 메뉴 포함)
-│   └── web/                    # Axum 웹 서버 호스트 (REST + Binary WebSocket)
-└── frontend/                   # React + TypeScript + Zustand + xterm.js 공용 UI
+│   └── desktop/                # Tauri v2 데스크톱 앱 호스트 (네이티브 메뉴 포함)
+└── frontend/                   # React + TypeScript + Zustand + xterm.js UI
 ```
 
 ---
@@ -89,58 +82,50 @@ conduit/
 | 계층 | 기술 | 역할 |
 |---|---|---|
 | Async Runtime | `tokio` | 비동기 세션, 네트워크, 채널 오케스트레이션 |
-| Local PTY | `portable-pty` | 크로스 플랫폼 로컬 쉘 (`spawn_blocking` 격리) |
+| Local PTY | `portable-pty` | 크로스 플랫폼 로컬 쉘 (전용 OS 스레드 격리) |
 | SSH / SFTP | `russh`, `russh-keys`, `russh-sftp` | SSH 터미널 및 멀티플렉싱 SFTP 클라이언트 |
 | Serial / Telnet | `tokio-serial`, `tokio::net` | 시리얼 포트 및 RFC 854 Telnet 접속 |
 | Storage & Vault | `rusqlite`, `keyring`, `aes-gcm`, `zeroize` | SQLite 영속화 및 Envelope Encryption |
 | Desktop Host | `Tauri v2` | 네이티브 윈도우, 메뉴, Binary IPC Channel |
-| Web Host | `Axum 0.8` | REST API, 정적 에셋 서빙, WebSocket 멀티플렉싱 |
 | Frontend | `React`, `TypeScript`, `Zustand`, `xterm.js` | WebGL 터미널 렌더링, Split Pane, SFTP UI, 매뉴얼 |
 
 ---
 
 ## 빠른 시작 (Quick Start)
 
-### 사전 요구사항
+### 방법 1. 릴리즈 아카이브 다운로드 후 바로 실행 (권장)
+GitHub [Releases](../../releases) 페이지에서 OS에 맞는 `.zip` 또는 `.tar.gz` 압축 파일을 받아 압축을 해제한 뒤 실행 파일을 바로 실행하면 됩니다.
+- **Windows (`x86_64`)**: `conduit.exe` 실행
+- **macOS (`arm64`)**: `Conduit Terminal.app` 실행 (최초 실행 시 Gatekeeper 경고가 뜨면 `xattr -cr "Conduit Terminal.app"` 실행)
+- **Linux (`x86_64`)**: `./conduit` 실행 (시스템에 `libwebkit2gtk-4.1` 필요)
+
+### 방법 2. 소스에서 직접 빌드 및 실행
+
+#### 사전 요구사항
 - **Rust**: 1.80+ (`rustup`, `cargo`)
-- **Node.js**: 20+ (`npm`)
-- **데스크톱 빌드 시 (Tauri v2)**:
+- **Node.js**: 22+ (`npm`)
+- **OS별 Tauri v2 의존성**:
   - Windows: WebView2 Runtime, Visual Studio Build Tools (C++)
   - macOS: Xcode Command Line Tools
-  - Linux: `libwebkit2gtk-4.1-dev`, `libsecret-1-dev`, `libudev-dev` 등
+  - Linux: `libwebkit2gtk-4.1-dev`, `libayatana-appindicator3-dev`, `libsecret-1-dev`, `libudev-dev` 등
 
-### 1. 프론트엔드 빌드 (공통 필수)
+#### 1. 아이콘 및 프론트엔드 빌드
 
 ```bash
+node scripts/generate-icons.mjs
 cd frontend
 npm install
 npm run build
 cd ..
 ```
 
-### 2. 웹 서버 모드 실행 (Axum)
+#### 2. 데스크톱 앱 실행 (Tauri v2)
 
 ```bash
-cargo run -p conduit-web
-```
-기본 주소 `http://127.0.0.1:3030` 으로 접속하면 브라우저에서 전체 기능을 바로 사용할 수 있습니다.
-- 환경 변수 옵션:
-  - `CONDUIT_BIND` (기본: `127.0.0.1:3030`)
-  - `CONDUIT_DB` (기본: `./conduit.db`)
-  - `CONDUIT_FRONTEND_DIR` (기본: `./frontend/dist`)
-
-### 3. 데스크톱 앱 모드 실행 (Tauri v2)
-
-```bash
-# 개발 모드 (Vite HMR + Tauri)
-cd frontend && npm run dev &
-cargo run -p conduit-desktop
-
-# 또는 빌드된 frontend/dist 기반 실행
 cargo run -p conduit-desktop
 ```
 
-### 4. 테스트 실행
+#### 3. 테스트 실행
 
 ```bash
 cargo test --workspace

@@ -18,8 +18,6 @@ import type {
 import type { AppTransport } from './index';
 
 export class TauriTransport implements AppTransport {
-  readonly mode = 'desktop' as const;
-
   async createSession(
     config: SessionConfig,
     onData: (chunk: Uint8Array) => void,

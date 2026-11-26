@@ -77,7 +77,6 @@ const LayoutRightIcon: React.FC<{ active: boolean }> = ({ active }) => (
 
 export const TopBar: React.FC = () => {
   const {
-    transport,
     tabs,
     activeTabId,
     leftOpen,
@@ -214,10 +213,6 @@ export const TopBar: React.FC = () => {
           <BookOpen size={15} />
           <span>매뉴얼</span>
         </button>
-
-        <span className="mode-badge" title="활성 호스트 모드">
-          {transport.mode === 'desktop' ? 'Desktop App' : 'Web Mode'}
-        </span>
       </div>
     </header>
   );
