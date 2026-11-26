@@ -17,11 +17,11 @@ Rust(`tokio` + `portable-pty` + `russh` + `russh-sftp` + `tokio-serial`) 기반�
   - **하단 Broadcast 입력 (`Ctrl+Shift+M`)**: 전체 세션 / 현재 화면 세션 / 선택된 세션 3가지 모드로 Zero-Copy(`Bytes::clone`) 명령 전송
 - **VS Code 스타일 Activity Bar & 중첩 폴더 트리 북마크**
   - 좌/우/하단 패널 토글 및 아이콘 드래그 패널 재배치, 리사이즈
-  - SQLite 기반 다단계 폴더 트리 북마크(드래그 순서/폴더 이동, 삭제·종료 확인, JSON Import/Export), 앱 설정, SSH `known_hosts` (TOFU) 저장 (`rusqlite`)
-  - OS 기본 키체인(`keyring`)에 256-bit 마스터 키 1개만 보관하고 각 자격 증명은 `AES-256-GCM`으로 암호화하는 **Envelope Encryption**
-- **커스터마이징 & 내장 사용자 매뉴얼**
-  - 5종 내장 컬러 스킴(Catppuccin Mocha, Tokyo Night, Dracula, One Dark Pro, Solarized Light)
-  - Nerd Fonts 및 폰트 합자(Ligatures), 커서 스타일, 스크롤백, 세션 종료 확인 설정
+  - SQLite 기반 다단계 폴더 트리 북마크(드래그 순서/폴더 이동, 우클릭 편집·삭제, 중복 이름 방지 및 저장 전 연결 확인, JSON Import/Export), 앱 설정, SSH `known_hosts` (TOFU) 저장 (`rusqlite`)
+  - OS 기본 키체인(`keyring`)에 256-bit 마스터 키 1개만 보관하고 각 자격 증명은 `AES-256-GCM`으로 암호화하는 **Envelope Encryption** + 선택적 **마스터 패스워드** 실행 잠금
+- **커스터마이징 & 인코딩 & 내장 사용자 매뉴얼**
+  - 8종 내장 컬러 스킴(Dark 4종: Catppuccin Mocha, Tokyo Night, Dracula, One Dark Pro / Light 4종: Solarized Light, GitHub Light, Pure White, Catppuccin Latte White)
+  - 세션별 문자 인코딩(`UTF-8`, `EUC-KR / CP949`, `Shift_JIS`, `GBK` 등) 지정 및 실시간 전환, Nerd Fonts/합자, 커서 스타일, 스크롤백, 세션 종료 확인, 저장된 세션 초기화(`초기화` 입력 확인)
   - **앱 내장 사용자 매뉴얼**: 상단 바 `매뉴얼 (F1)` 버튼 또는 네이티브 메뉴(`도움말 -> 사용자 매뉴얼`)로 언제든 확인 가능
 
 ---
@@ -71,7 +71,8 @@ conduit/
 │   ├── conduit-core/           # SessionManager, Adaptive Coalescer, PTY/SSH/SFTP/Serial/Telnet
 │   └── conduit-storage/        # SQLite 북마크/설정/known_hosts + Keyring AES-256-GCM Vault
 ├── apps/
-│   └── desktop/                # Tauri v2 데스크톱 앱 호스트 (네이티브 메뉴 포함)
+│   ├── desktop/                # Tauri v2 데스크톱 앱 호스트 (네이티브 메뉴 포함)
+│   └── uninstaller/            # Windows 포터블 제거 도구 (uninstall.exe)
 └── frontend/                   # React + TypeScript + Zustand + xterm.js UI
 ```
 
@@ -95,7 +96,7 @@ conduit/
 
 ### 방법 1. 릴리즈 아카이브 다운로드 후 바로 실행 (권장)
 GitHub [Releases](../../releases) 페이지에서 OS에 맞는 압축 파일을 받아 압축을 해제한 뒤 실행 파일을 바로 실행하면 됩니다.
-- **Windows (`x86_64`)**: `.zip` 압축 해제 후 `conduit.exe` 실행
+- **Windows (`x86_64`)**: `.zip` 압축 해제 후 `conduit.exe` 실행 (제거 시 `uninstall.exe` 실행 시 DB 및 설치 폴더 삭제)
 - **macOS (`arm64`)**: `.tar.gz` 또는 `.zip` 압축 해제 후 `Conduit Terminal.app` 실행 (최초 실행 시 Gatekeeper 경고가 뜨면 `xattr -cr "Conduit Terminal.app"` 실행)
 - **Linux (`x86_64`)**: `.tar.gz` 압축 해제 후 `./conduit` 실행 (시스템에 `libwebkit2gtk-4.1` 필요)
 

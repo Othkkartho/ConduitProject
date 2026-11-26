@@ -42,7 +42,8 @@ export const USER_MANUAL_SECTIONS: ManualSection[] = [
           'Ctrl+Shift+E를 누르거나 상단의 [새 연결] 버튼을 누르면 간편 SSH 연결 창이 열립니다.',
           '`test@192.128.0.1` 또는 `test@192.128.0.1:2222`를 입력한 뒤 다음 단계에서 비밀번호(`Password for user@host`)를 입력하면 북마크에 저장하지 않고 즉시 연결됩니다(`Remember` 체크 시 현재 세션 동안 기억).',
           '연결 후 터미널 헤더의 북마크 저장 버튼(Ctrl+Shift+D)을 누르면 호스트명(hostname), IP, 포트, 사용자명이 자동 채워진 상태로 북마크에 저장할 수 있습니다(비밀번호만 다시 입력).',
-          '새로운 북마크 생성은 좌/우 사이드바의 [세션 북마크] 패널 내 [새 북마크 / 연결(+)] 또는 우클릭 메뉴를 통해서만 진행할 수 있습니다.',
+          '새로운 북마크 생성은 좌/우 사이드바의 [세션 북마크] 패널 내 [새 북마크 / 연결(+)] 또는 우클릭 메뉴를 통해서만 진행할 수 있습니다. 저장된 세션을 우클릭하면 편집·삭제 메뉴가 열립니다.',
+          '중복된 세션 이름은 저장할 수 없으며, 저장 전 실제 연결을 검증합니다(저장만 하기 실패 시 "그래도 저장하시겠습니까?" 확인). 생성 창이나 터미널 헤더에서 UTF-8, EUC-KR 등 세션 인코딩을 선택·전환할 수 있습니다.',
         ],
         tips: ['모달 창은 텍스트 드래그 중 마우스가 창 밖으로 나가도 닫히지 않습니다. X, 취소 버튼 또는 Esc로 닫을 수 있습니다.'],
       },
@@ -136,8 +137,8 @@ export const USER_MANUAL_SECTIONS: ManualSection[] = [
       {
         heading: '실시간 테마 & 세션 종료 확인',
         body: [
-          '설정(Ctrl+,) 창에서 Catppuccin Mocha, Tokyo Night, Dracula, One Dark Pro, Solarized Light 중 원하는 테마를 즉시 적용할 수 있습니다.',
-          '[세션 종료 시 동작]에서 "종료 전 한 번 물어보기"(기본값) 또는 "바로 닫기"를 선택할 수 있습니다.',
+          '설정(Ctrl+,) 창에서 Dark 4종(Catppuccin Mocha, Tokyo Night, Dracula, One Dark Pro)과 Light 4종(Solarized Light, GitHub Light, Pure White, Catppuccin Latte White) 테마를 즉시 적용할 수 있습니다.',
+          '[세션 종료 시 동작]에서 "종료 전 한 번 물어보기"(기본값) 또는 "바로 닫기"를 선택할 수 있으며, [마스터 패스워드 사용]으로 실행 시 잠금을 걸거나 [저장된 세션 초기화]로 모든 북마크·자격 증명을 초기화할 수 있습니다.',
         ],
       },
     ],

@@ -8,6 +8,19 @@ and commit messages follow [Conventional Commits v1.0.0](https://www.conventiona
 
 > **Versioning Policy**: Initial development begins at `0.1.0`. Major version increments (e.g., `1.0.0`) occur only upon explicit project owner approval.
 
+## [0.3.0] - 2026-11-26
+
+### Added
+- **Per-Session Character Encoding**: Added encoding selection (`utf-8`, `euc-kr`, `shift_jis`, `euc-jp`, `gbk`, `gb18030`, `big5`, `windows-1252`, `iso-8859-2`, `windows-1251`, `koi8-r`) per bookmark and live per-pane switching in `TerminalPane` backed by stateful `encoding_rs` transcoding in `conduit-core`.
+- **Master Password Lock**: Added optional startup Master Password protection (default `false`) in `SettingsModal` using salted PBKDF2-HMAC-SHA256 (`100,000` iterations) and constant-time comparison, gating backend session/bookmark commands behind an unlock guard and a lock screen on startup.
+- **Windows Uninstaller (`uninstall.exe`) & Session Reset**: Added `conduit-uninstaller` (`apps/uninstaller`) bundled in the Windows release archive to remove `%APPDATA%\dev.conduit.terminal` SQLite DB, keyring master key, and the installation folder; added a **저장된 세션 초기화** Danger Zone in `SettingsModal` requiring typing `초기화` to confirm.
+- **Light Color Schemes**: Added 3 pure-white (`#ffffff`) Light themes (`GitHub Light`, `Pure White`, `Catppuccin Latte White`) alongside `Solarized Light`.
+- **Bookmark Context Menu**: Right-clicking a saved session in `Sidebar` now opens a dedicated `세션 편집` / `세션 삭제` context menu.
+
+### Changed
+- **Bookmark Hover Tooltip**: Hovering over saved sessions/folders in the sidebar now displays the full session/folder name instead of static hint text.
+- **Duplicate Session Name Guard & Connection Verification**: Rejects duplicate session names on save (both frontend and SQLite layer), tests real connectivity before saving, and when clicking `저장만 하기` asks *"연결되지 않습니다. 그래도 저장하시겠습니까?"* before allowing force-save on connection failure.
+
 ## [0.2.0] - 2026-11-26
 
 ### Added
