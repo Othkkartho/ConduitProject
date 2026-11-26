@@ -94,10 +94,10 @@ conduit/
 ## 빠른 시작 (Quick Start)
 
 ### 방법 1. 릴리즈 아카이브 다운로드 후 바로 실행 (권장)
-GitHub [Releases](../../releases) 페이지에서 OS에 맞는 `.zip` 또는 `.tar.gz` 압축 파일을 받아 압축을 해제한 뒤 실행 파일을 바로 실행하면 됩니다.
-- **Windows (`x86_64`)**: `conduit.exe` 실행
-- **macOS (`arm64`)**: `Conduit Terminal.app` 실행 (최초 실행 시 Gatekeeper 경고가 뜨면 `xattr -cr "Conduit Terminal.app"` 실행)
-- **Linux (`x86_64`)**: `./conduit` 실행 (시스템에 `libwebkit2gtk-4.1` 필요)
+GitHub [Releases](../../releases) 페이지에서 OS에 맞는 압축 파일을 받아 압축을 해제한 뒤 실행 파일을 바로 실행하면 됩니다.
+- **Windows (`x86_64`)**: `.zip` 압축 해제 후 `conduit.exe` 실행
+- **macOS (`arm64`)**: `.tar.gz` 또는 `.zip` 압축 해제 후 `Conduit Terminal.app` 실행 (최초 실행 시 Gatekeeper 경고가 뜨면 `xattr -cr "Conduit Terminal.app"` 실행)
+- **Linux (`x86_64`)**: `.tar.gz` 압축 해제 후 `./conduit` 실행 (시스템에 `libwebkit2gtk-4.1` 필요)
 
 ### 방법 2. 소스에서 직접 빌드 및 실행
 
@@ -138,6 +138,7 @@ cargo test --workspace
 | 단축키 | 동작 |
 |---|---|
 | `F1` | 내장 사용자 매뉴얼 열기 |
+| `Ctrl + Tab` / `Ctrl + Shift + Tab` | 다음 / 이전 세션 탭 순환 이동 |
 | `Ctrl + B` / `Ctrl + J` / `Ctrl + Alt + B` | 좌측 / 하단 / 우측 패널 토글 |
 | `Ctrl + Shift + B` / `M` / `S` | 세션 북마크 / Broadcast / SFTP 뷰 토글 |
 | `Ctrl + Shift + T` | 새 로컬 터미널 탭 열기 |
