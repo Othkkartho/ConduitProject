@@ -71,6 +71,11 @@ export const TerminalPane: React.FC<TerminalPaneProps> = ({ tabId, pane }) => {
 
   const isFocused = activePaneId === pane.id;
   const isSearchOpen = searchPaneId === pane.id;
+  const isPaneDragActive =
+    draggingItem !== null &&
+    (draggingItem.kind === 'pane' ||
+      draggingItem.kind === 'tab' ||
+      draggingItem.kind === 'bookmark');
 
   useEffect(() => {
     const container = containerRef.current;
@@ -108,10 +113,11 @@ export const TerminalPane: React.FC<TerminalPaneProps> = ({ tabId, pane }) => {
   }, [pane.id, transport, setPaneSession, setPaneDetectedHostname]);
 
   const handleDragOver = (e: React.DragEvent) => {
+    const payload = draggingItem ?? useAppStore.getState().draggingItem;
     if (
-      !draggingItem ||
-      draggingItem.kind === 'dock-view' ||
-      draggingItem.kind === 'folder'
+      !payload ||
+      payload.kind === 'dock-view' ||
+      payload.kind === 'folder'
     ) {
       return;
     }
@@ -122,7 +128,13 @@ export const TerminalPane: React.FC<TerminalPaneProps> = ({ tabId, pane }) => {
       e.clientY,
       wrapper.getBoundingClientRect()
     );
-    const check = canDropOnPane(tabs, tabId, pane.id, zone, draggingItem);
+    const check = canDropOnPane(
+      useAppStore.getState().tabs,
+      tabId,
+      pane.id,
+      zone,
+      payload
+    );
     if (check.allowed || check.reason) {
       e.preventDefault();
       e.dataTransfer.dropEffect = check.allowed ? 'move' : 'none';
@@ -133,31 +145,45 @@ export const TerminalPane: React.FC<TerminalPaneProps> = ({ tabId, pane }) => {
   };
 
   const handleDrop = (e: React.DragEvent) => {
+    const payload = draggingItem ?? useAppStore.getState().draggingItem;
     if (
-      draggingItem?.kind === 'dock-view' ||
-      draggingItem?.kind === 'folder'
+      !payload ||
+      payload.kind === 'dock-view' ||
+      payload.kind === 'folder'
     ) {
       return;
     }
     e.preventDefault();
-    const hint = dropHint;
+    const wrapper = wrapperRef.current;
+    const zone = wrapper
+      ? detectDropZone(e.clientX, e.clientY, wrapper.getBoundingClientRect())
+      : dropHint?.zone;
     setDropHint(null);
-    if (!draggingItem || !hint || !hint.allowed) {
-      setDraggingItem(null);
-      return;
-    }
-    const payload = draggingItem;
     setDraggingItem(null);
-    void dropOnPane(tabId, pane.id, hint.zone, payload);
+    if (!zone) return;
+    const check = canDropOnPane(
+      useAppStore.getState().tabs,
+      tabId,
+      pane.id,
+      zone,
+      payload
+    );
+    if (!check.allowed) return;
+    void dropOnPane(tabId, pane.id, zone, payload);
   };
 
   return (
     <div
       ref={wrapperRef}
-      className={`pane-wrapper ${isFocused ? 'focused' : ''}`}
+      className={`pane-wrapper ${isFocused ? 'focused' : ''} ${
+        isPaneDragActive ? 'drag-active' : ''
+      }`}
       onMouseDown={() => {
         setActivePane(pane.id);
         focusTerminal(pane.id);
+      }}
+      onDragEnter={(e) => {
+        if (isPaneDragActive) e.preventDefault();
       }}
       onDragOver={handleDragOver}
       onDragLeave={(e) => {

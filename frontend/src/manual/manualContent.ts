@@ -137,7 +137,7 @@ export const USER_MANUAL_SECTIONS: ManualSection[] = [
         heading: '실시간 테마 & 세션 종료 확인',
         body: [
           '설정(Ctrl+,) 창에서 Catppuccin Mocha, Tokyo Night, Dracula, One Dark Pro, Solarized Light 중 원하는 테마를 즉시 적용할 수 있습니다.',
-          '[세션 종료 시 동작]에서 "바로 닫기" 또는 "종료 전 한 번 물어보기"를 선택할 수 있습니다.',
+          '[세션 종료 시 동작]에서 "종료 전 한 번 물어보기"(기본값) 또는 "바로 닫기"를 선택할 수 있습니다.',
         ],
       },
     ],
@@ -152,6 +152,7 @@ export const USER_MANUAL_SECTIONS: ManualSection[] = [
         heading: '기본 단축키 일람',
         body: [
           'F1 : 사용자 매뉴얼 열기',
+          'Ctrl+Tab / Ctrl+Shift+Tab : 다음 / 이전 세션 탭 순환 이동',
           'Ctrl+B / Ctrl+J / Ctrl+Alt+B : 좌측 / 하단 / 우측 패널 토글',
           'Ctrl+Shift+B : 세션 북마크 뷰 토글',
           'Ctrl+Shift+M : Broadcast 입력 뷰 토글',

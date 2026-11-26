@@ -50,7 +50,7 @@ export const UserManualModal: React.FC = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <BookOpen size={16} />
             <span>Conduit 사용자 매뉴얼</span>
-            <span className="mode-badge">v0.1.0</span>
+            <span className="mode-badge">v0.2.0</span>
           </div>
           <button className="icon-btn" onClick={() => setManualOpen(false)}>
             <X size={16} />

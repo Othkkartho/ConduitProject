@@ -3,6 +3,7 @@ import { getTransport, type AppTransport } from '../transport/factory';
 import {
   applySettingsToAllTerminals,
   disposeTerminal,
+  focusTerminal,
 } from '../utils/terminalRegistry';
 import type {
   AppSettings,
@@ -45,10 +46,12 @@ export const DEFAULT_SETTINGS: AppSettings = {
   cursor_style: 'block',
   cursor_blink: true,
   scrollback: 10000,
-  confirm_on_close: false,
+  confirm_on_close: true,
   shortcuts: {
     manual: 'F1',
     new_tab: 'Ctrl+Shift+T',
+    next_tab: 'Ctrl+Tab',
+    prev_tab: 'Ctrl+Shift+Tab',
     quick_connect: 'Ctrl+Shift+E',
     save_bookmark: 'Ctrl+Shift+D',
     toggle_bookmarks: 'Ctrl+Shift+B',
@@ -384,6 +387,7 @@ interface AppState {
   openSessionTab: (title: string, config: SessionConfig) => void;
   openLocalTab: () => void;
   setActiveTab: (tabId: string) => void;
+  cycleTab: (direction: 1 | -1) => void;
   setActivePane: (paneId: string) => void;
   closeTab: (tabId: string) => void;
   closePane: (tabId: string, paneId: string) => void;
@@ -527,7 +531,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       const normalized: AppSettings = {
         ...DEFAULT_SETTINGS,
         ...loadedSettings,
-        confirm_on_close: loadedSettings.confirm_on_close ?? false,
+        confirm_on_close: loadedSettings.confirm_on_close ?? true,
       };
       set({ bookmarkTree: tree, settings: normalized });
       applySettingsToAllTerminals(normalized);
@@ -563,6 +567,22 @@ export const useAppStore = create<AppState>((set, get) => ({
       activeTabId: tabId,
       activePaneId: existsInTab ? existsInTab.id : firstPane(tab.root).id,
     });
+  },
+
+  cycleTab: (direction) => {
+    const { tabs, activeTabId } = get();
+    if (tabs.length <= 1) return;
+    const curIdx = tabs.findIndex((t) => t.id === activeTabId);
+    const startIdx = curIdx === -1 ? 0 : curIdx;
+    const nextIdx = (startIdx + direction + tabs.length) % tabs.length;
+    const nextTab = tabs[nextIdx];
+    if (!nextTab) return;
+    const targetPane = firstPane(nextTab.root);
+    set({
+      activeTabId: nextTab.id,
+      activePaneId: targetPane.id,
+    });
+    window.setTimeout(() => focusTerminal(targetPane.id), 0);
   },
 
   setActivePane: (paneId) => set({ activePaneId: paneId }),

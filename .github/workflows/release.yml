@@ -74,7 +74,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential pkg-config libssl-dev libgtk-3-dev libxdo-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf libsecret-1-dev libudev-dev zip
+          sudo apt-get install -y build-essential pkg-config libssl-dev libgtk-3-dev libxdo-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf libsecret-1-dev libudev-dev
 
       - name: Generate desktop icons
         run: node scripts/generate-icons.mjs
@@ -90,7 +90,7 @@ jobs:
       - name: Build release binary
         run: cargo build --release -p conduit-desktop
 
-      - name: Package Windows zip & tar.gz
+      - name: Package Windows zip archive
         if: matrix.os == 'windows-latest'
         shell: pwsh
         env:
@@ -103,9 +103,8 @@ jobs:
           Copy-Item "target/release/conduit-desktop.exe" "$stage/conduit.exe"
           Copy-Item "README.md", "LICENSE" "$stage/"
           Compress-Archive -Path $stage -DestinationPath "artifacts/$pkg.zip" -Force
-          tar -czf "artifacts/$pkg.tar.gz" -C staging $pkg
 
-      - name: Package macOS .app bundle zip & tar.gz
+      - name: Package macOS .app bundle tar.gz & zip
         if: matrix.os == 'macos-latest'
         shell: bash
         env:
@@ -139,7 +138,7 @@ jobs:
           tar -czf "artifacts/${PKG}.tar.gz" -C staging "${PKG}"
           (cd staging && zip -r -y "../artifacts/${PKG}.zip" "${PKG}")
 
-      - name: Package Linux zip & tar.gz
+      - name: Package Linux tar.gz archive
         if: matrix.os == 'ubuntu-latest'
         shell: bash
         env:
@@ -153,7 +152,6 @@ jobs:
           chmod +x "${STAGE}/conduit"
           cp README.md LICENSE "${STAGE}/"
           tar -czf "artifacts/${PKG}.tar.gz" -C staging "${PKG}"
-          (cd staging && zip -r "../artifacts/${PKG}.zip" "${PKG}")
 
       - name: Upload portable archives
         uses: actions/upload-artifact@v7
@@ -195,9 +193,9 @@ jobs:
               "---",
               "",
               "## 실행 방법 (압축 해제 후 바로 실행)",
-              "- **Windows (`x86_64`)**: `conduit-" + tag + "-windows-x86_64.zip` 또는 `.tar.gz` 압축 해제 후 `conduit.exe` 실행",
+              "- **Windows (`x86_64`)**: `conduit-" + tag + "-windows-x86_64.zip` 압축 해제 후 `conduit.exe` 실행",
               "- **macOS (`arm64`)**: `conduit-" + tag + "-macos-arm64.tar.gz` 또는 `.zip` 압축 해제 후 `Conduit Terminal.app` 실행 (최초 실행 시 보안 경고가 뜨면 `xattr -cr \"Conduit Terminal.app\"` 실행)",
-              "- **Linux (`x86_64`)**: `conduit-" + tag + "-linux-x86_64.tar.gz` 또는 `.zip` 압축 해제 후 `./conduit` 실행 (시스템에 `libwebkit2gtk-4.1` 필요)"
+              "- **Linux (`x86_64`)**: `conduit-" + tag + "-linux-x86_64.tar.gz` 압축 해제 후 `./conduit` 실행 (시스템에 `libwebkit2gtk-4.1` 필요)"
             ].join("\n");
             fs.writeFileSync("release-notes.md", section + "\n" + usage + "\n");
           '

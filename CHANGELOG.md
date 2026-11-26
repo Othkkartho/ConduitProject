@@ -8,6 +8,20 @@ and commit messages follow [Conventional Commits v1.0.0](https://www.conventiona
 
 > **Versioning Policy**: Initial development begins at `0.1.0`. Major version increments (e.g., `1.0.0`) occur only upon explicit project owner approval.
 
+## [0.2.0] - 2026-11-26
+
+### Added
+- **Tab Cycling Shortcuts**: Added `Ctrl+Tab` (forward circular switching) and `Ctrl+Shift+Tab` (reverse circular switching) across open session tabs even when `xterm.js` is focused.
+
+### Changed
+- **Close Confirmation Default**: Changed `confirm_on_close` default from `false` to `true` across Rust settings defaults (`conduit-protocol`) and frontend store initialization.
+- **CI & Release Workflows**:
+  - Updated `.github/workflows/ci.yml` to run only on `pull_request` (and `workflow_dispatch`), avoiding duplicate test runs on `main` merges.
+  - Updated `.github/workflows/release.yml` asset packaging per OS: Windows (`.zip`), macOS (`.tar.gz` & `.zip`), and Linux (`.tar.gz`).
+
+### Fixed
+- **Tauri v2 Desktop Drag-and-Drop**: Set `"dragDropEnabled": false` in `tauri.conf.json` (disabling WebView2 native file-drop interception that blocked HTML5 DnD), disabled pointer interception on `.pane-xterm` during active drags, and improved drop target calculation in `Sidebar` and `TerminalPane` for folder/bookmark moving, same-folder priority reordering, and automatic 2×2 drag-to-split.
+
 ## [0.1.0] - 2026-11-26
 
 ### Added

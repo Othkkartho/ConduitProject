@@ -673,16 +673,16 @@ mod tests {
         );
 
         let mut settings = repo.get_settings().unwrap();
-        assert!(!settings.confirm_on_close);
+        assert!(settings.confirm_on_close);
         settings.font_size = 16;
         settings.theme = "tokyo-night".into();
-        settings.confirm_on_close = true;
+        settings.confirm_on_close = false;
         repo.save_settings(&settings).unwrap();
 
         let reloaded = repo.get_settings().unwrap();
         assert_eq!(reloaded.font_size, 16);
         assert_eq!(reloaded.theme, "tokyo-night");
-        assert!(reloaded.confirm_on_close);
+        assert!(!reloaded.confirm_on_close);
     }
 
     #[test]

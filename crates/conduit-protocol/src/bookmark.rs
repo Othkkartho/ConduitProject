@@ -121,6 +121,10 @@ pub struct BookmarkTree {
     pub bookmarks: Vec<Bookmark>,
 }
 
+fn default_confirm_on_close() -> bool {
+    true
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppSettings {
     pub theme: String,
@@ -130,7 +134,7 @@ pub struct AppSettings {
     pub cursor_style: String, // "block" | "underline" | "bar"
     pub cursor_blink: bool,
     pub scrollback: u32,
-    #[serde(default)]
+    #[serde(default = "default_confirm_on_close")]
     pub confirm_on_close: bool,
     pub shortcuts: HashMap<String, String>,
 }
@@ -140,6 +144,8 @@ impl Default for AppSettings {
         let mut shortcuts = HashMap::new();
         shortcuts.insert("manual".into(), "F1".into());
         shortcuts.insert("new_tab".into(), "Ctrl+Shift+T".into());
+        shortcuts.insert("next_tab".into(), "Ctrl+Tab".into());
+        shortcuts.insert("prev_tab".into(), "Ctrl+Shift+Tab".into());
         shortcuts.insert("quick_connect".into(), "Ctrl+Shift+E".into());
         shortcuts.insert("save_bookmark".into(), "Ctrl+Shift+D".into());
         shortcuts.insert("toggle_bookmarks".into(), "Ctrl+Shift+B".into());
@@ -159,7 +165,7 @@ impl Default for AppSettings {
             cursor_style: "block".into(),
             cursor_blink: true,
             scrollback: 10000,
-            confirm_on_close: false,
+            confirm_on_close: true,
             shortcuts,
         }
     }
@@ -174,7 +180,7 @@ mod tests {
         let settings = AppSettings::default();
         assert_eq!(settings.theme, "catppuccin-mocha");
         assert_eq!(settings.font_size, 14);
-        assert!(!settings.confirm_on_close);
+        assert!(settings.confirm_on_close);
         assert_eq!(
             settings.shortcuts.get("quick_connect").map(String::as_str),
             Some("Ctrl+Shift+E")

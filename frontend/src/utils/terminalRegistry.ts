@@ -90,6 +90,12 @@ export function ensureAndAttachTerminal(
   term.loadAddon(searchAddon);
   term.loadAddon(webLinksAddon);
   term.open(hostEl);
+  term.attachCustomKeyEventHandler((e) => {
+    if (e.ctrlKey && !e.altKey && !e.metaKey && e.key === 'Tab') {
+      return false;
+    }
+    return true;
+  });
   fitAddon.fit();
 
   try {
