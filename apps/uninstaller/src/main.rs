@@ -5,9 +5,9 @@ use std::path::{Component, Path, PathBuf};
 
 const APP_IDENTIFIER: &str = "dev.conduit.terminal";
 
-#[cfg(any(target_os = "windows", test))]
+#[cfg(target_os = "windows")]
 const KEYRING_SERVICE: &str = "conduit-terminal";
-#[cfg(any(target_os = "windows", test))]
+#[cfg(target_os = "windows")]
 const KEYRING_ACCOUNT: &str = "master-key";
 
 pub fn resolve_app_data_dir() -> Option<PathBuf> {
@@ -262,7 +262,6 @@ fn main() {
 
     #[cfg(not(target_os = "windows"))]
     {
-        let _ = (KEYRING_SERVICE, KEYRING_ACCOUNT);
         eprintln!("Conduit uninstall.exe is designed for Windows portable builds.");
     }
 }
@@ -273,12 +272,20 @@ mod tests {
 
     #[test]
     fn safe_install_dir_rejects_system_and_user_roots() {
-        assert!(!is_safe_install_dir(Path::new("C:\\")));
-        assert!(!is_safe_install_dir(Path::new("C:\\Users\\Alice\\Desktop")));
-        assert!(!is_safe_install_dir(Path::new("C:\\Program Files")));
-        assert!(is_safe_install_dir(Path::new(
-            "D:\\Apps\\conduit-v0.2.0-windows-x86_64"
-        )));
+        #[cfg(target_os = "windows")]
+        let root_path = Path::new("C:\\");
+        #[cfg(not(target_os = "windows"))]
+        let root_path = Path::new("/");
+
+        let desktop_dir = PathBuf::from("Users").join("Alice").join("Desktop");
+        let program_files_dir = PathBuf::from("System").join("Program Files");
+        let safe_install_dir = PathBuf::from("Apps").join("conduit-v0.3.0-windows-x86_64");
+
+        assert!(!is_safe_install_dir(root_path));
+        assert!(!is_safe_install_dir(Path::new("conduit")));
+        assert!(!is_safe_install_dir(&desktop_dir));
+        assert!(!is_safe_install_dir(&program_files_dir));
+        assert!(is_safe_install_dir(&safe_install_dir));
     }
 
     #[test]
