@@ -11,7 +11,13 @@ export type SshAuth =
   | { auth_type: 'private_key'; key_path: string; passphrase?: string };
 
 export type SessionConfig =
-  | { protocol: 'local_pty'; shell?: string; cwd?: string; size: TerminalSize }
+  | {
+      protocol: 'local_pty';
+      shell?: string;
+      cwd?: string;
+      size: TerminalSize;
+      encoding?: string;
+    }
   | {
       protocol: 'ssh';
       host: string;
@@ -19,6 +25,7 @@ export type SessionConfig =
       username: string;
       auth: SshAuth;
       size: TerminalSize;
+      encoding?: string;
     }
   | {
       protocol: 'serial';
@@ -27,12 +34,14 @@ export type SessionConfig =
       data_bits?: number;
       parity?: 'none' | 'odd' | 'even';
       stop_bits?: number;
+      encoding?: string;
     }
   | {
       protocol: 'telnet';
       host: string;
       port: number;
       size: TerminalSize;
+      encoding?: string;
     };
 
 export interface Folder {
@@ -66,6 +75,7 @@ export interface Bookmark {
   auth_type?: 'password' | 'private_key' | null;
   key_path?: string | null;
   credential_id?: string | null;
+  encoding?: string;
   sort_order?: number;
   port_forwards: PortForwardRule[];
   notes: string;
@@ -120,7 +130,14 @@ export interface AppSettings {
   cursor_blink: boolean;
   scrollback: number;
   confirm_on_close?: boolean;
+  master_password_enabled?: boolean;
   shortcuts: Record<string, string>;
+}
+
+export interface MasterPasswordStatus {
+  enabled: boolean;
+  configured: boolean;
+  unlocked: boolean;
 }
 
 export interface SftpEntry {
@@ -165,6 +182,7 @@ export interface SaveFromPaneDraft {
   cwd?: string;
   serial_port?: string;
   baud_rate?: number;
+  encoding?: string;
 }
 
 export type PendingCloseState =
