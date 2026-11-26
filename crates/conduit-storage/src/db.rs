@@ -1,15 +1,30 @@
 use crate::vault::{SecretVault, VaultError};
+use base64::{engine::general_purpose::STANDARD as B64, Engine};
 use chrono::Utc;
 use conduit_protocol::{
     AppSettings, Bookmark, BookmarkExportBundle, BookmarkImportRequest, BookmarkImportResult,
-    BookmarkTree, ExportedBookmark, Folder, ImportMode, SerialConfig, SessionConfig, SshAuth,
-    TelnetConfig, TerminalSize, TreeReorderRequest,
+    BookmarkTree, ExportedBookmark, Folder, ImportMode, MasterPasswordStatus, SerialConfig,
+    SessionConfig, SshAuth, TelnetConfig, TerminalSize, TreeReorderRequest,
 };
+use pbkdf2::pbkdf2_hmac;
+use rand::{rngs::OsRng, RngCore};
 use rusqlite::{params, Connection, OptionalExtension};
+use serde::{Deserialize, Serialize};
+use sha2::Sha256;
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use std::sync::Mutex;
+use subtle::ConstantTimeEq;
 use thiserror::Error;
+
+const MASTER_PW_ITERATIONS: u32 = 100_000;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct StoredMasterPassword {
+    salt_b64: String,
+    hash_b64: String,
+    iterations: u32,
+}
 
 #[derive(Debug, Error)]
 pub enum StorageError {
@@ -99,6 +114,7 @@ impl StorageRepository {
                 auth_type TEXT NULL,
                 key_path TEXT NULL,
                 credential_id TEXT NULL,
+                encoding TEXT NOT NULL DEFAULT 'utf-8',
                 sort_order INTEGER NOT NULL DEFAULT 0,
                 port_forwards_json TEXT NOT NULL DEFAULT '[]',
                 notes TEXT NOT NULL DEFAULT '',
@@ -125,19 +141,29 @@ impl StorageRepository {
             ",
         )?;
 
-        // Migrate existing databases created prior to `sort_order` on bookmarks
+        // Migrate existing databases created prior to `sort_order` / `encoding` on bookmarks
         let mut has_sort_order = false;
-        let mut stmt = conn.prepare("PRAGMA table_info(bookmarks)")?;
-        let cols = stmt.query_map([], |row| row.get::<_, String>(1))?;
-        for col in cols {
-            if col? == "sort_order" {
-                has_sort_order = true;
-                break;
+        let mut has_encoding = false;
+        {
+            let mut stmt = conn.prepare("PRAGMA table_info(bookmarks)")?;
+            let cols = stmt.query_map([], |row| row.get::<_, String>(1))?;
+            for col in cols {
+                match col?.as_str() {
+                    "sort_order" => has_sort_order = true,
+                    "encoding" => has_encoding = true,
+                    _ => {}
+                }
             }
         }
         if !has_sort_order {
             conn.execute(
                 "ALTER TABLE bookmarks ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0",
+                [],
+            )?;
+        }
+        if !has_encoding {
+            conn.execute(
+                "ALTER TABLE bookmarks ADD COLUMN encoding TEXT NOT NULL DEFAULT 'utf-8'",
                 [],
             )?;
         }
@@ -164,12 +190,12 @@ impl StorageRepository {
         let mut b_stmt = conn.prepare(
             "SELECT id, folder_id, name, protocol, host, port, username, shell, cwd,
                     serial_port, baud_rate, auth_type, key_path, credential_id,
-                    sort_order, port_forwards_json, notes
+                    encoding, sort_order, port_forwards_json, notes
              FROM bookmarks ORDER BY sort_order ASC, name ASC",
         )?;
         let bookmarks = b_stmt
             .query_map([], |row| {
-                let pf_json: String = row.get(15)?;
+                let pf_json: String = row.get(16)?;
                 let port_forwards = serde_json::from_str(&pf_json).unwrap_or_default();
                 Ok(Bookmark {
                     id: row.get(0)?,
@@ -186,9 +212,10 @@ impl StorageRepository {
                     auth_type: row.get(11)?,
                     key_path: row.get(12)?,
                     credential_id: row.get(13)?,
-                    sort_order: row.get(14)?,
+                    encoding: row.get(14)?,
+                    sort_order: row.get(15)?,
                     port_forwards,
-                    notes: row.get(16)?,
+                    notes: row.get(17)?,
                 })
             })?
             .collect::<Result<Vec<_>, _>>()?;
@@ -238,6 +265,31 @@ impl StorageRepository {
         secret_plaintext: Option<&str>,
     ) -> Result<(), StorageError> {
         let mut bookmark_to_save = bookmark.clone();
+        bookmark_to_save.name = bookmark_to_save.name.trim().to_string();
+        if bookmark_to_save.name.is_empty() {
+            return Err(StorageError::Invalid("세션 이름을 입력해 주세요.".into()));
+        }
+        if bookmark_to_save.encoding.trim().is_empty() {
+            bookmark_to_save.encoding = "utf-8".into();
+        }
+
+        {
+            let conn = self.conn.lock().map_err(|_| StorageError::Lock)?;
+            let duplicate: Option<i64> = conn
+                .query_row(
+                    "SELECT 1 FROM bookmarks WHERE TRIM(name) = ?1 AND id != ?2 LIMIT 1",
+                    params![bookmark_to_save.name, bookmark_to_save.id],
+                    |row| row.get(0),
+                )
+                .optional()?;
+            if duplicate.is_some() {
+                return Err(StorageError::Invalid(format!(
+                    "이미 '{}' 이름의 세션이 존재합니다. 다른 이름을 입력해 주세요.",
+                    bookmark_to_save.name
+                )));
+            }
+        }
+
         if let Some(secret) = secret_plaintext {
             if !secret.is_empty() {
                 let cred_id = bookmark_to_save
@@ -256,8 +308,8 @@ impl StorageRepository {
             "INSERT INTO bookmarks (
                 id, folder_id, name, protocol, host, port, username, shell, cwd,
                 serial_port, baud_rate, auth_type, key_path, credential_id,
-                sort_order, port_forwards_json, notes, updated_at
-             ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18)
+                encoding, sort_order, port_forwards_json, notes, updated_at
+             ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19)
              ON CONFLICT(id) DO UPDATE SET
                 folder_id = excluded.folder_id,
                 name = excluded.name,
@@ -272,6 +324,7 @@ impl StorageRepository {
                 auth_type = excluded.auth_type,
                 key_path = excluded.key_path,
                 credential_id = excluded.credential_id,
+                encoding = excluded.encoding,
                 sort_order = excluded.sort_order,
                 port_forwards_json = excluded.port_forwards_json,
                 notes = excluded.notes,
@@ -291,6 +344,7 @@ impl StorageRepository {
                 bookmark_to_save.auth_type,
                 bookmark_to_save.key_path,
                 bookmark_to_save.credential_id,
+                bookmark_to_save.encoding,
                 bookmark_to_save.sort_order,
                 pf_json,
                 bookmark_to_save.notes,
@@ -454,6 +508,32 @@ impl StorageRepository {
         Ok(())
     }
 
+    /// Removes all saved folders, bookmarks, and encrypted session secrets while preserving app settings.
+    pub fn reset_saved_sessions(&self) -> Result<(), StorageError> {
+        let mut conn = self.conn.lock().map_err(|_| StorageError::Lock)?;
+        let tx = conn.transaction()?;
+        tx.execute_batch("DELETE FROM bookmarks; DELETE FROM folders; DELETE FROM secrets;")?;
+        tx.commit()?;
+        Ok(())
+    }
+
+    pub fn load_bookmark_secret(&self, bookmark_id: &str) -> Result<Option<String>, StorageError> {
+        let cred_id: Option<String> = {
+            let conn = self.conn.lock().map_err(|_| StorageError::Lock)?;
+            conn.query_row(
+                "SELECT credential_id FROM bookmarks WHERE id = ?1",
+                params![bookmark_id],
+                |row| row.get(0),
+            )
+            .optional()?
+            .flatten()
+        };
+        match cred_id {
+            Some(cid) => self.load_secret(&cid),
+            None => Ok(None),
+        }
+    }
+
     pub fn save_secret(&self, id: &str, plaintext: &str) -> Result<(), StorageError> {
         let encrypted = self.vault.encrypt(plaintext)?;
         let now = Utc::now().timestamp();
@@ -533,7 +613,7 @@ impl StorageRepository {
         }
     }
 
-    pub fn save_settings(&self, settings: &AppSettings) -> Result<(), StorageError> {
+    fn save_settings_raw(&self, settings: &AppSettings) -> Result<(), StorageError> {
         let json = serde_json::to_string(settings)?;
         let conn = self.conn.lock().map_err(|_| StorageError::Lock)?;
         conn.execute(
@@ -542,6 +622,126 @@ impl StorageRepository {
             params![json],
         )?;
         Ok(())
+    }
+
+    pub fn save_settings(&self, settings: &AppSettings) -> Result<(), StorageError> {
+        let mut to_save = settings.clone();
+        to_save.master_password_enabled = self.get_settings()?.master_password_enabled;
+        self.save_settings_raw(&to_save)
+    }
+
+    pub fn get_master_password_status(&self) -> Result<MasterPasswordStatus, StorageError> {
+        let enabled = self.get_settings()?.master_password_enabled;
+        let configured = {
+            let conn = self.conn.lock().map_err(|_| StorageError::Lock)?;
+            let raw: Option<String> = conn
+                .query_row(
+                    "SELECT value_json FROM settings WHERE key = 'master_password_hash'",
+                    [],
+                    |row| row.get(0),
+                )
+                .optional()?;
+            raw.is_some()
+        };
+        Ok(MasterPasswordStatus {
+            enabled,
+            configured,
+            unlocked: !(enabled && configured),
+        })
+    }
+
+    pub fn verify_master_password(&self, candidate: &str) -> Result<bool, StorageError> {
+        let raw: Option<String> = {
+            let conn = self.conn.lock().map_err(|_| StorageError::Lock)?;
+            conn.query_row(
+                "SELECT value_json FROM settings WHERE key = 'master_password_hash'",
+                [],
+                |row| row.get(0),
+            )
+            .optional()?
+        };
+        let Some(json) = raw else {
+            return Ok(false);
+        };
+        let stored: StoredMasterPassword = serde_json::from_str(&json)?;
+        let salt = B64
+            .decode(stored.salt_b64)
+            .map_err(|_| StorageError::Invalid("손상된 마스터 패스워드 데이터".into()))?;
+        let expected = B64
+            .decode(stored.hash_b64)
+            .map_err(|_| StorageError::Invalid("손상된 마스터 패스워드 데이터".into()))?;
+        if expected.len() != 32 {
+            return Ok(false);
+        }
+        let mut derived = [0u8; 32];
+        pbkdf2_hmac::<Sha256>(candidate.as_bytes(), &salt, stored.iterations, &mut derived);
+        Ok(bool::from(derived.ct_eq(&expected)))
+    }
+
+    pub fn set_master_password(
+        &self,
+        new_password: &str,
+        current_password: Option<&str>,
+    ) -> Result<(), StorageError> {
+        if new_password.is_empty() {
+            return Err(StorageError::Invalid("마스터 패스워드를 입력해 주세요.".into()));
+        }
+        let status = self.get_master_password_status()?;
+        if status.enabled && status.configured {
+            let cur = current_password.unwrap_or("");
+            if !self.verify_master_password(cur)? {
+                return Err(StorageError::Invalid(
+                    "현재 마스터 패스워드가 일치하지 않습니다.".into(),
+                ));
+            }
+        }
+
+        let mut salt = [0u8; 16];
+        OsRng.fill_bytes(&mut salt);
+        let mut derived = [0u8; 32];
+        pbkdf2_hmac::<Sha256>(
+            new_password.as_bytes(),
+            &salt,
+            MASTER_PW_ITERATIONS,
+            &mut derived,
+        );
+        let stored = StoredMasterPassword {
+            salt_b64: B64.encode(salt),
+            hash_b64: B64.encode(derived),
+            iterations: MASTER_PW_ITERATIONS,
+        };
+        let json = serde_json::to_string(&stored)?;
+        {
+            let conn = self.conn.lock().map_err(|_| StorageError::Lock)?;
+            conn.execute(
+                "INSERT INTO settings (key, value_json) VALUES ('master_password_hash', ?1)
+                 ON CONFLICT(key) DO UPDATE SET value_json = excluded.value_json",
+                params![json],
+            )?;
+        }
+
+        let mut settings = self.get_settings()?;
+        settings.master_password_enabled = true;
+        self.save_settings_raw(&settings)
+    }
+
+    pub fn disable_master_password(&self, current_password: &str) -> Result<(), StorageError> {
+        let status = self.get_master_password_status()?;
+        if status.enabled && status.configured && !self.verify_master_password(current_password)? {
+            return Err(StorageError::Invalid(
+                "현재 마스터 패스워드가 일치하지 않습니다.".into(),
+            ));
+        }
+        {
+            let conn = self.conn.lock().map_err(|_| StorageError::Lock)?;
+            conn.execute(
+                "DELETE FROM settings WHERE key = 'master_password_hash'",
+                [],
+            )?;
+        }
+        let mut settings = self.get_settings()?;
+        settings.master_password_enabled = false;
+        self.save_settings_raw(&settings)
     }
 
     /// Resolves a stored bookmark and decrypts any associated secret into a runnable SessionConfig.
@@ -562,6 +762,12 @@ impl StorageRepository {
             None => None,
         };
 
+        let encoding = if bm.encoding.trim().is_empty() {
+            "utf-8".to_string()
+        } else {
+            bm.encoding
+        };
+
         match bm.protocol.as_str() {
             "ssh" => {
                 let auth = match bm.auth_type.as_deref() {
@@ -579,6 +785,7 @@ impl StorageRepository {
                     username: bm.username.unwrap_or_else(|| "root".into()),
                     auth,
                     size,
+                    encoding,
                 })
             }
             "serial" => Ok(SessionConfig::Serial(SerialConfig {
@@ -587,16 +794,19 @@ impl StorageRepository {
                 data_bits: 8,
                 parity: Default::default(),
                 stop_bits: 1,
+                encoding,
             })),
             "telnet" => Ok(SessionConfig::Telnet(TelnetConfig {
                 host: bm.host.unwrap_or_else(|| "127.0.0.1".into()),
                 port: bm.port.unwrap_or(23),
                 size,
+                encoding,
             })),
             _ => Ok(SessionConfig::LocalPty {
                 shell: bm.shell,
                 cwd: bm.cwd,
                 size,
+                encoding,
             }),
         }
     }
@@ -632,6 +842,7 @@ mod tests {
             auth_type: Some("password".into()),
             key_path: None,
             credential_id: Some("cred-1".into()),
+            encoding: "utf-8".into(),
             sort_order: 0,
             port_forwards: vec![],
             notes: "Main node".into(),
@@ -725,6 +936,7 @@ mod tests {
                 auth_type: Some("password".into()),
                 key_path: None,
                 credential_id: None,
+                encoding: "utf-8".into(),
                 sort_order: 0,
                 port_forwards: vec![],
                 notes: String::new(),
@@ -776,6 +988,7 @@ mod tests {
                 auth_type: Some("password".into()),
                 key_path: None,
                 credential_id: None,
+                encoding: "utf-8".into(),
                 sort_order: 1,
                 port_forwards: vec![],
                 notes: String::new(),
@@ -849,6 +1062,7 @@ mod tests {
                 auth_type: Some("password".into()),
                 key_path: None,
                 credential_id: Some("c1".into()),
+                encoding: "utf-8".into(),
                 sort_order: 0,
                 port_forwards: vec![],
                 notes: String::new(),
@@ -901,5 +1115,156 @@ mod tests {
                 .as_deref(),
             Some("s3cr3t")
         );
+    }
+
+    #[test]
+    fn encoding_persists_in_bookmark_and_session_config() {
+        let repo = StorageRepository::open_in_memory().unwrap();
+        let bm = Bookmark {
+            id: "bm-kr".into(),
+            folder_id: None,
+            name: "Legacy EUC-KR".into(),
+            protocol: "ssh".into(),
+            host: Some("10.0.0.9".into()),
+            port: Some(22),
+            username: Some("legacy".into()),
+            shell: None,
+            cwd: None,
+            serial_port: None,
+            baud_rate: None,
+            auth_type: Some("password".into()),
+            key_path: None,
+            credential_id: None,
+            encoding: "euc-kr".into(),
+            sort_order: 0,
+            port_forwards: vec![],
+            notes: String::new(),
+        };
+        repo.upsert_bookmark(&bm, Some("pw")).unwrap();
+        let tree = repo.list_tree().unwrap();
+        assert_eq!(tree.bookmarks[0].encoding, "euc-kr");
+
+        let cfg = repo
+            .build_session_config("bm-kr", TerminalSize::default())
+            .unwrap();
+        assert_eq!(cfg.encoding(), "euc-kr");
+    }
+
+    #[test]
+    fn duplicate_bookmark_name_is_rejected_and_self_update_allowed() {
+        let repo = StorageRepository::open_in_memory().unwrap();
+        let make_bm = |id: &str, name: &str| Bookmark {
+            id: id.into(),
+            folder_id: None,
+            name: name.into(),
+            protocol: "local_pty".into(),
+            host: None,
+            port: None,
+            username: None,
+            shell: None,
+            cwd: None,
+            serial_port: None,
+            baud_rate: None,
+            auth_type: None,
+            key_path: None,
+            credential_id: None,
+            encoding: "utf-8".into(),
+            sort_order: 0,
+            port_forwards: vec![],
+            notes: String::new(),
+        };
+
+        repo.upsert_bookmark(&make_bm("b1", "Prod Server"), None).unwrap();
+        // Same ID update should succeed
+        repo.upsert_bookmark(&make_bm("b1", "Prod Server"), None).unwrap();
+        // Different ID with same trimmed name should fail
+        let dup = repo.upsert_bookmark(&make_bm("b2", "  Prod Server "), None);
+        assert!(dup.is_err());
+    }
+
+    #[test]
+    fn reset_saved_sessions_clears_tree_and_secrets_preserves_settings() {
+        let repo = StorageRepository::open_in_memory().unwrap();
+        repo.upsert_folder(&Folder {
+            id: "f1".into(),
+            parent_id: None,
+            name: "F1".into(),
+            sort_order: 0,
+        })
+        .unwrap();
+        repo.upsert_bookmark(
+            &Bookmark {
+                id: "b1".into(),
+                folder_id: Some("f1".into()),
+                name: "S1".into(),
+                protocol: "ssh".into(),
+                host: Some("10.0.0.1".into()),
+                port: Some(22),
+                username: Some("root".into()),
+                shell: None,
+                cwd: None,
+                serial_port: None,
+                baud_rate: None,
+                auth_type: Some("password".into()),
+                key_path: None,
+                credential_id: Some("sec-1".into()),
+                encoding: "utf-8".into(),
+                sort_order: 0,
+                port_forwards: vec![],
+                notes: String::new(),
+            },
+            Some("secret"),
+        )
+        .unwrap();
+
+        let mut s = repo.get_settings().unwrap();
+        s.theme = "github-light".into();
+        repo.save_settings(&s).unwrap();
+
+        repo.reset_saved_sessions().unwrap();
+        let tree = repo.list_tree().unwrap();
+        assert!(tree.folders.is_empty());
+        assert!(tree.bookmarks.is_empty());
+        assert!(repo.load_secret("sec-1").unwrap().is_none());
+        assert_eq!(repo.get_settings().unwrap().theme, "github-light");
+    }
+
+    #[test]
+    fn master_password_lifecycle_and_settings_preservation() {
+        let repo = StorageRepository::open_in_memory().unwrap();
+        let initial = repo.get_master_password_status().unwrap();
+        assert!(!initial.enabled);
+        assert!(!initial.configured);
+        assert!(initial.unlocked);
+
+        repo.set_master_password("s3cret-master", None).unwrap();
+        let enabled = repo.get_master_password_status().unwrap();
+        assert!(enabled.enabled);
+        assert!(enabled.configured);
+        assert!(!enabled.unlocked);
+
+        assert!(repo.verify_master_password("s3cret-master").unwrap());
+        assert!(!repo.verify_master_password("wrong").unwrap());
+
+        // General save_settings must not overwrite master_password_enabled to false
+        let mut settings = repo.get_settings().unwrap();
+        settings.master_password_enabled = false;
+        settings.theme = "pure-white".into();
+        repo.save_settings(&settings).unwrap();
+        assert!(repo.get_settings().unwrap().master_password_enabled);
+
+        // Changing password requires valid current password
+        assert!(repo.set_master_password("next-pw", Some("wrong")).is_err());
+        repo.set_master_password("next-pw", Some("s3cret-master"))
+            .unwrap();
+        assert!(repo.verify_master_password("next-pw").unwrap());
+
+        // Disabling requires valid current password
+        assert!(repo.disable_master_password("wrong").is_err());
+        repo.disable_master_password("next-pw").unwrap();
+        let disabled = repo.get_master_password_status().unwrap();
+        assert!(!disabled.enabled);
+        assert!(!disabled.configured);
+        assert!(disabled.unlocked);
     }
 }
