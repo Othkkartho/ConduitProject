@@ -1,9 +1,9 @@
 [workspace]
 resolver = "2"
 members = [
-    "crates/conduit-protocol",
-    "crates/conduit-storage",
-    "crates/conduit-core",
+    "crates/ptyloom-protocol",
+    "crates/ptyloom-storage",
+    "crates/ptyloom-core",
     "apps/desktop/src-tauri",
     "apps/manager",
 ]
@@ -50,6 +50,6 @@ tauri = { version = "2", features = [] }
 tauri-build = { version = "2", features = [] }
 
 # Internal Crates
-conduit-protocol = { path = "crates/conduit-protocol" }
-conduit-storage = { path = "crates/conduit-storage" }
-conduit-core = { path = "crates/conduit-core" }
+ptyloom-protocol = { path = "crates/ptyloom-protocol" }
+ptyloom-storage = { path = "crates/ptyloom-storage" }
+ptyloom-core = { path = "crates/ptyloom-core" }

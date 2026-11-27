@@ -8,6 +8,11 @@ and commit messages follow [Conventional Commits v1.0.0](https://www.conventiona
 
 > **Versioning Policy**: Initial development begins at `0.1.0`. Major version increments (e.g., `1.0.0`) occur only upon explicit project owner approval.
 
+## [Unreleased]
+
+### Changed
+- **Project Rename (Conduit -> Ptyloom)**: Renamed the project, Rust workspace crates (`ptyloom-protocol`, `ptyloom-core`, `ptyloom-storage`), desktop & manager packages (`ptyloom-desktop`, `ptyloom-manager`), Tauri identifier (`dev.ptyloom.terminal`), SQLite DB (`ptyloom.db`), keyring service (`ptyloom-terminal`), master key fallback (`.ptyloom-master.key`), `ptyloom-manager` GitHub release endpoint (`Othkkartho/PtyloomProject`), frontend branding/manual, CI/CD release packaging, and documentation from Conduit to Ptyloom.
+
 ## [0.3.0] - 2026-11-26
 
 ### Added

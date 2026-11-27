@@ -101,7 +101,7 @@ export const TopBar: React.FC = () => {
       <div className="topbar-left">
         <div className="brand-pill">
           <Terminal size={16} />
-          <span>Conduit</span>
+          <span>Ptyloom</span>
         </div>
 
         <div

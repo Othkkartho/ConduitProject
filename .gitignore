@@ -21,7 +21,7 @@ apps/desktop/src-tauri/gen/schemas/
 *.db-wal
 *.sqlite
 *.sqlite3
-.conduit-master.key
+.ptyloom-master.key
 .env
 .env.*
 

@@ -1,4 +1,4 @@
-# Conduit — Multi-Protocol Desktop Terminal Emulator & Session Manager
+# Ptyloom — Multi-Protocol Desktop Terminal Emulator & Session Manager
 
 Rust(`tokio` + `portable-pty` + `russh` + `russh-sftp` + `tokio-serial`) 기반의 고성능 코어 엔진과 **Tauri v2 데스크톱 앱(Windows/macOS/Linux)** 으로 구동되는 멀티 프로토콜 터미널 에뮬레이터 및 세션 매니저입니다.
 
@@ -44,9 +44,9 @@ flowchart TB
     end
 
     subgraph Workspace["Shared Rust Core"]
-        Protocol["conduit-protocol (DTO)"]
-        Core["conduit-core (SessionManager / Adaptive Coalescer / Backends)"]
-        Storage["conduit-storage (SQLite + Keyring + AES-256-GCM)"]
+        Protocol["ptyloom-protocol (DTO)"]
+        Core["ptyloom-core (SessionManager / Adaptive Coalescer / Backends)"]
+        Storage["ptyloom-storage (SQLite + Keyring + AES-256-GCM)"]
     end
 
     Transport <==>|"Tauri v2 Binary IPC Channel"| TauriHost
@@ -61,18 +61,18 @@ flowchart TB
 ## 디렉토리 구조
 
 ```text
-conduit/
+ptyloom/
 ├── Cargo.toml                  # Cargo Workspace 루트
 ├── .github/workflows/          # CI 테스트/체크 및 OS별 포터블 릴리즈 빌드
 ├── scripts/                    # Tauri 데스크톱 아이콘 생성 스크립트
 ├── docs/                       # 아키텍처, 스트리밍, 보안, 사용자 매뉴얼 문서
 ├── crates/
-│   ├── conduit-protocol/       # 공통 DTO, 세션/북마크/SFTP/설정 모델
-│   ├── conduit-core/           # SessionManager, Adaptive Coalescer, PTY/SSH/SFTP/Serial/Telnet
-│   └── conduit-storage/        # SQLite 북마크/설정/known_hosts + Keyring AES-256-GCM Vault
+│   ├── ptyloom-protocol/       # 공통 DTO, 세션/북마크/SFTP/설정 모델
+│   ├── ptyloom-core/           # SessionManager, Adaptive Coalescer, PTY/SSH/SFTP/Serial/Telnet
+│   └── ptyloom-storage/        # SQLite 북마크/설정/known_hosts + Keyring AES-256-GCM Vault
 ├── apps/
 │   ├── desktop/                # Tauri v2 데스크톱 앱 호스트 (네이티브 메뉴 포함)
-│   └── manager/                # 크로스 플랫폼 업데이트/제거 도구 (conduit-manager)
+│   └── manager/                # 크로스 플랫폼 업데이트/제거 도구 (ptyloom-manager)
 └── frontend/                   # React + TypeScript + Zustand + xterm.js UI
 ```
 
@@ -96,9 +96,9 @@ conduit/
 
 ### 방법 1. 릴리즈 아카이브 다운로드 후 바로 실행 (권장)
 GitHub [Releases](../../releases) 페이지에서 OS에 맞는 압축 파일을 받아 압축을 해제한 뒤 실행 파일을 바로 실행하면 됩니다.
-- **Windows (`x86_64`)**: `.zip` 압축 해제 후 `conduit.exe` 실행 (업데이트 `1` / 제거 `2` -> `y`: `conduit-manager.exe`)
-- **macOS (`arm64`)**: `.tar.gz` 또는 `.zip` 압축 해제 후 `Conduit Terminal.app` 실행 (최초 실행 시 Gatekeeper 경고가 뜨면 `xattr -cr "Conduit Terminal.app"` 실행, 업데이트/제거: `./conduit-manager`)
-- **Linux (`x86_64`)**: `.tar.gz` 압축 해제 후 `./conduit` 실행 (시스템에 `libwebkit2gtk-4.1` 필요, 업데이트/제거: `./conduit-manager`)
+- **Windows (`x86_64`)**: `.zip` 압축 해제 후 `ptyloom.exe` 실행 (업데이트 `1` / 제거 `2` -> `y`: `ptyloom-manager.exe`)
+- **macOS (`arm64`)**: `.tar.gz` 또는 `.zip` 압축 해제 후 `Ptyloom Terminal.app` 실행 (최초 실행 시 Gatekeeper 경고가 뜨면 `xattr -cr "Ptyloom Terminal.app"` 실행, 업데이트/제거: `./ptyloom-manager`)
+- **Linux (`x86_64`)**: `.tar.gz` 압축 해제 후 `./ptyloom` 실행 (시스템에 `libwebkit2gtk-4.1` 필요, 업데이트/제거: `./ptyloom-manager`)
 
 ### 방법 2. 소스에서 직접 빌드 및 실행
 
@@ -123,7 +123,7 @@ cd ..
 #### 2. 데스크톱 앱 실행 (Tauri v2)
 
 ```bash
-cargo run -p conduit-desktop
+cargo run -p ptyloom-desktop
 ```
 
 #### 3. 테스트 실행
@@ -155,7 +155,7 @@ cargo test --workspace
 - [01. 전체 시스템 아키텍처](docs/01-architecture.md)
 - [02. 초저지연 스트리밍 및 백프레셔 데이터 흐름](docs/02-dataflow-and-streaming.md)
 - [03. 데이터 저장소 및 Envelope Encryption 보안 설계](docs/03-storage-and-security.md)
-- [04. Conduit 사용자 매뉴얼](docs/04-user-manual.md)
+- [04. Ptyloom 사용자 매뉴얼](docs/04-user-manual.md)
 
 ---
 

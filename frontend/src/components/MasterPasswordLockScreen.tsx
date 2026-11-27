@@ -33,7 +33,7 @@ export const MasterPasswordLockScreen: React.FC = () => {
             <Lock size={20} />
           </div>
           <div>
-            <div style={{ fontWeight: 700, fontSize: 16 }}>Conduit 잠금</div>
+            <div style={{ fontWeight: 700, fontSize: 16 }}>Ptyloom 잠금</div>
             <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
               프로그램을 사용하려면 마스터 패스워드를 입력해 주세요.
             </div>

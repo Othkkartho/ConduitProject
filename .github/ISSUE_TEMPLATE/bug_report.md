@@ -12,7 +12,7 @@ assignees: ''
 
 ## Environment
 <!-- Fill in your environment details below. -->
-- **Conduit Version:** (e.g. `0.3.0`)
+- **Ptyloom Version:** (e.g. `0.3.0`)
 - **OS & Architecture:** (e.g. `Windows 11 x86_64`, `macOS 15 arm64`, `Ubuntu 24.04 x86_64`)
 - **Protocol:** (e.g. `Local PTY` / `SSH` / `SFTP` / `Serial` / `Telnet`)
 

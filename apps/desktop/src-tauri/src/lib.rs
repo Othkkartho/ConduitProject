@@ -1,8 +1,8 @@
 mod commands;
 
 use commands::AppState;
-use conduit_core::SessionManager;
-use conduit_storage::StorageRepository;
+use ptyloom_core::SessionManager;
+use ptyloom_storage::StorageRepository;
 use std::path::PathBuf;
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
@@ -13,7 +13,7 @@ pub fn run() {
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "conduit_desktop=info".into()),
+                .unwrap_or_else(|_| "ptyloom_desktop=info".into()),
         )
         .init();
 
@@ -23,7 +23,7 @@ pub fn run() {
                 .path()
                 .app_data_dir()
                 .unwrap_or_else(|_| PathBuf::from("."))
-                .join("conduit.db");
+                .join("ptyloom.db");
             let storage = Arc::new(
                 StorageRepository::open(&db_path)
                     .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?,
@@ -162,5 +162,5 @@ pub fn run() {
             commands::sftp_remove,
         ])
         .run(tauri::generate_context!())
-        .expect("error while running Conduit desktop application");
+        .expect("error while running Ptyloom desktop application");
 }

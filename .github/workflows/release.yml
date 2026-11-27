@@ -94,10 +94,10 @@ jobs:
         run: npm run build
 
       - name: Build release binary
-        run: cargo build --release -p conduit-desktop
+        run: cargo build --release -p ptyloom-desktop
 
-      - name: Build conduit-manager binary
-        run: cargo build --release -p conduit-manager
+      - name: Build ptyloom-manager binary
+        run: cargo build --release -p ptyloom-manager
 
       - name: Package Windows zip archive
         if: matrix.os == 'windows-latest'
@@ -106,11 +106,11 @@ jobs:
           VERSION: ${{ needs.prepare.outputs.version }}
           TARGET: ${{ matrix.target_name }}
         run: |
-          $pkg = "conduit-v$($env:VERSION)-$($env:TARGET)"
+          $pkg = "ptyloom-v$($env:VERSION)-$($env:TARGET)"
           $stage = "staging/$pkg"
           New-Item -ItemType Directory -Force -Path $stage, "artifacts" | Out-Null
-          Copy-Item "target/release/conduit-desktop.exe" "$stage/conduit.exe"
-          Copy-Item "target/release/conduit-manager.exe" "$stage/conduit-manager.exe"
+          Copy-Item "target/release/ptyloom-desktop.exe" "$stage/ptyloom.exe"
+          Copy-Item "target/release/ptyloom-manager.exe" "$stage/ptyloom-manager.exe"
           Copy-Item "README.md", "LICENSE" "$stage/"
           Compress-Archive -Path $stage -DestinationPath "artifacts/$pkg.zip" -Force
 
@@ -121,26 +121,26 @@ jobs:
           VERSION: ${{ needs.prepare.outputs.version }}
           TARGET: ${{ matrix.target_name }}
         run: |
-          PKG="conduit-v${VERSION}-${TARGET}"
+          PKG="ptyloom-v${VERSION}-${TARGET}"
           STAGE="staging/${PKG}"
-          APP="${STAGE}/Conduit Terminal.app"
+          APP="${STAGE}/Ptyloom Terminal.app"
           mkdir -p "${APP}/Contents/MacOS" "${APP}/Contents/Resources" artifacts
-          cp target/release/conduit-desktop "${APP}/Contents/MacOS/conduit-desktop"
-          chmod +x "${APP}/Contents/MacOS/conduit-desktop"
-          cp target/release/conduit-manager "${STAGE}/conduit-manager"
-          chmod +x "${STAGE}/conduit-manager"
+          cp target/release/ptyloom-desktop "${APP}/Contents/MacOS/ptyloom-desktop"
+          chmod +x "${APP}/Contents/MacOS/ptyloom-desktop"
+          cp target/release/ptyloom-manager "${STAGE}/ptyloom-manager"
+          chmod +x "${STAGE}/ptyloom-manager"
           cp apps/desktop/src-tauri/icons/icon.png "${APP}/Contents/Resources/icon.png"
           cat > "${APP}/Contents/Info.plist" <<PLIST
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0">
           <dict>
-            <key>CFBundleName</key><string>Conduit Terminal</string>
-            <key>CFBundleDisplayName</key><string>Conduit Terminal</string>
-            <key>CFBundleIdentifier</key><string>dev.conduit.terminal</string>
+            <key>CFBundleName</key><string>Ptyloom Terminal</string>
+            <key>CFBundleDisplayName</key><string>Ptyloom Terminal</string>
+            <key>CFBundleIdentifier</key><string>dev.ptyloom.terminal</string>
             <key>CFBundleVersion</key><string>${VERSION}</string>
             <key>CFBundleShortVersionString</key><string>${VERSION}</string>
-            <key>CFBundleExecutable</key><string>conduit-desktop</string>
+            <key>CFBundleExecutable</key><string>ptyloom-desktop</string>
             <key>CFBundlePackageType</key><string>APPL</string>
             <key>NSHighResolutionCapable</key><true/>
           </dict>
@@ -157,13 +157,13 @@ jobs:
           VERSION: ${{ needs.prepare.outputs.version }}
           TARGET: ${{ matrix.target_name }}
         run: |
-          PKG="conduit-v${VERSION}-${TARGET}"
+          PKG="ptyloom-v${VERSION}-${TARGET}"
           STAGE="staging/${PKG}"
           mkdir -p "${STAGE}" artifacts
-          cp target/release/conduit-desktop "${STAGE}/conduit"
-          chmod +x "${STAGE}/conduit"
-          cp target/release/conduit-manager "${STAGE}/conduit-manager"
-          chmod +x "${STAGE}/conduit-manager"
+          cp target/release/ptyloom-desktop "${STAGE}/ptyloom"
+          chmod +x "${STAGE}/ptyloom"
+          cp target/release/ptyloom-manager "${STAGE}/ptyloom-manager"
+          chmod +x "${STAGE}/ptyloom-manager"
           cp README.md LICENSE "${STAGE}/"
           tar -czf "artifacts/${PKG}.tar.gz" -C staging "${PKG}"
 
@@ -201,15 +201,15 @@ jobs:
             const escaped = version.replace(/\./g, "\\.");
             const re = new RegExp(`## \\[${escaped}\\][^\\n]*\\n([\\s\\S]*?)(?=\\n## \\[|$)`);
             const m = changelog.match(re);
-            const section = m ? m[1].trim() : `Conduit ${tag} release.`;
+            const section = m ? m[1].trim() : `Ptyloom ${tag} release.`;
             const usage = [
               "",
               "---",
               "",
               "## 실행 방법 (압축 해제 후 바로 실행)",
-              "- **Windows (`x86_64`)**: `conduit-" + tag + "-windows-x86_64.zip` 압축 해제 후 `conduit.exe` 실행 (업데이트 `1` / 제거 `2` -> `y`: `conduit-manager.exe`)",
-              "- **macOS (`arm64`)**: `conduit-" + tag + "-macos-arm64.tar.gz` 또는 `.zip` 압축 해제 후 `Conduit Terminal.app` 실행 (최초 실행 시 보안 경고가 뜨면 `xattr -cr \"Conduit Terminal.app\"`, 업데이트/제거: `./conduit-manager`)",
-              "- **Linux (`x86_64`)**: `conduit-" + tag + "-linux-x86_64.tar.gz` 압축 해제 후 `./conduit` 실행 (시스템에 `libwebkit2gtk-4.1` 필요, 업데이트/제거: `./conduit-manager`)"
+              "- **Windows (`x86_64`)**: `ptyloom-" + tag + "-windows-x86_64.zip` 압축 해제 후 `ptyloom.exe` 실행 (업데이트 `1` / 제거 `2` -> `y`: `ptyloom-manager.exe`)",
+              "- **macOS (`arm64`)**: `ptyloom-" + tag + "-macos-arm64.tar.gz` 또는 `.zip` 압축 해제 후 `Ptyloom Terminal.app` 실행 (최초 실행 시 보안 경고가 뜨면 `xattr -cr \"Ptyloom Terminal.app\"`, 업데이트/제거: `./ptyloom-manager`)",
+              "- **Linux (`x86_64`)**: `ptyloom-" + tag + "-linux-x86_64.tar.gz` 압축 해제 후 `./ptyloom` 실행 (시스템에 `libwebkit2gtk-4.1` 필요, 업데이트/제거: `./ptyloom-manager`)"
             ].join("\n");
             fs.writeFileSync("release-notes.md", section + "\n" + usage + "\n");
           '
@@ -220,7 +220,7 @@ jobs:
         with:
           tag_name: ${{ needs.prepare.outputs.tag }}
           target_commitish: ${{ github.sha }}
-          name: Conduit ${{ needs.prepare.outputs.tag }}
+          name: Ptyloom ${{ needs.prepare.outputs.tag }}
           body_path: release-notes.md
           files: release-assets/*
           make_latest: true

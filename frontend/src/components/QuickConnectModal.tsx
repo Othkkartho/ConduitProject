@@ -546,12 +546,12 @@ export const QuickConnectModal: React.FC = () => {
                 <div className="form-field">
                   <label>시리얼 포트</label>
                   <input
-                    list="conduit-serial-ports"
+                    list="ptyloom-serial-ports"
                     placeholder="COM3 또는 /dev/ttyUSB0"
                     value={serialPort}
                     onChange={(e) => setSerialPort(e.target.value)}
                   />
-                  <datalist id="conduit-serial-ports">
+                  <datalist id="ptyloom-serial-ports">
                     {serialPorts.map((p) => (
                       <option key={p} value={p} />
                     ))}

@@ -1,7 +1,7 @@
 use crate::backend::{SessionBackend, SessionError};
 use async_trait::async_trait;
 use bytes::Bytes;
-use conduit_protocol::{SerialConfig, SerialParity, TerminalSize};
+use ptyloom_protocol::{SerialConfig, SerialParity, TerminalSize};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::mpsc;
 use tokio_serial::{DataBits, Parity, SerialPortBuilderExt, StopBits};

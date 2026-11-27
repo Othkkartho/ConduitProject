@@ -1,11 +1,11 @@
 [package]
-name = "conduit-manager"
+name = "ptyloom-manager"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 
 [[bin]]
-name = "conduit-manager"
+name = "ptyloom-manager"
 path = "src/main.rs"
 
 [dependencies]

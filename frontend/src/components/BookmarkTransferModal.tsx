@@ -53,7 +53,7 @@ export const BookmarkTransferModal: React.FC = () => {
       const dateStamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
       const a = document.createElement('a');
       a.href = url;
-      a.download = `conduit-bookmarks-${dateStamp}.json`;
+      a.download = `ptyloom-bookmarks-${dateStamp}.json`;
       a.click();
       URL.revokeObjectURL(url);
       setStatusMsg(
@@ -72,7 +72,7 @@ export const BookmarkTransferModal: React.FC = () => {
       const text = await file.text();
       const data = JSON.parse(text) as Partial<BookmarkExportBundle>;
       if (!Array.isArray(data.folders) || !Array.isArray(data.bookmarks)) {
-        throw new Error('올바른 Conduit 북마크 JSON 형식이 아닙니다.');
+        throw new Error('올바른 Ptyloom 북마크 JSON 형식이 아닙니다.');
       }
       setParsedBundle({
         version: typeof data.version === 'number' ? data.version : 1,

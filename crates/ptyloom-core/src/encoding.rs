@@ -79,7 +79,7 @@ mod tests {
     #[test]
     fn utf8_passthrough_is_zero_copy() {
         let enc = resolve_encoding("utf-8");
-        let raw = Bytes::from_static(b"hello conduit");
+        let raw = Bytes::from_static(b"hello ptyloom");
         let ptr = raw.as_ptr();
         let mut dec = StreamDecoder::new(enc);
         let out = dec.decode_chunk(raw.clone());
