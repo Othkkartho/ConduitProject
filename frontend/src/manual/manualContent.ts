@@ -13,10 +13,10 @@ export interface ManualSection {
 export const USER_MANUAL_SECTIONS: ManualSection[] = [
   {
     id: 'getting-started',
-    title: '1. 시작하기 (Conduit Desktop)',
+    title: '1. 시작하기 (Ptyloom Desktop)',
     badge: '개요',
     summary:
-      'Conduit은 Rust 코어 엔진과 Tauri v2 기반으로 동작하는 크로스 플랫폼 멀티 프로토콜 데스크톱 터미널입니다.',
+      'Ptyloom은 Rust 코어 엔진과 Tauri v2 기반으로 동작하는 크로스 플랫폼 멀티 프로토콜 데스크톱 터미널입니다.',
     blocks: [
       {
         heading: '네이티브 데스크톱 아키텍처',
@@ -165,7 +165,7 @@ export const USER_MANUAL_SECTIONS: ManualSection[] = [
           'Ctrl+, : 환경 설정 열기',
         ],
         tips: [
-          '대량 로그가 출력될 때 Conduit은 Adaptive Coalescer(4ms/64KB)와 Watermark 백프레셔(512KB)를 작동시키며, 입력 채널이 분리되어 있어 Ctrl+C가 항상 즉시 동작합니다.',
+          '대량 로그가 출력될 때 Ptyloom은 Adaptive Coalescer(4ms/64KB)와 Watermark 백프레셔(512KB)를 작동시키며, 입력 채널이 분리되어 있어 Ctrl+C가 항상 즉시 동작합니다.',
         ],
       },
     ],

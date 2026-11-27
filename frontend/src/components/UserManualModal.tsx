@@ -49,7 +49,7 @@ export const UserManualModal: React.FC = () => {
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <BookOpen size={16} />
-            <span>Conduit 사용자 매뉴얼</span>
+            <span>Ptyloom 사용자 매뉴얼</span>
             <span className="mode-badge">v0.3.0</span>
           </div>
           <button className="icon-btn" onClick={() => setManualOpen(false)}>

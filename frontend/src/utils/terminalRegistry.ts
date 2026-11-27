@@ -163,7 +163,7 @@ export function ensureAndAttachTerminal(
       },
       () => {
         if (!entry.disposed) {
-          term.writeln('\r\n\x1b[90m[Conduit] Session closed.\x1b[0m');
+          term.writeln('\r\n\x1b[90m[Ptyloom] Session closed.\x1b[0m');
           callbacks.onSessionClosed(entry.sessionId);
         }
       }
@@ -179,7 +179,7 @@ export function ensureAndAttachTerminal(
     .catch((err: unknown) => {
       if (entry.disposed) return;
       const message = err instanceof Error ? err.message : String(err);
-      term.writeln(`\r\n\x1b[31m[Conduit Error] ${message}\x1b[0m`);
+      term.writeln(`\r\n\x1b[31m[Ptyloom Error] ${message}\x1b[0m`);
       callbacks.onSessionError(message);
     });
 }

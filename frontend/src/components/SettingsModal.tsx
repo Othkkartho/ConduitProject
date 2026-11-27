@@ -183,11 +183,11 @@ export const SettingsModal: React.FC = () => {
             <div className="form-field full">
               <label>폰트 패밀리 (Nerd Fonts 및 합자 지원)</label>
               <input
-                list="conduit-font-presets"
+                list="ptyloom-font-presets"
                 value={draft.font_family}
                 onChange={(e) => setDraft({ ...draft, font_family: e.target.value })}
               />
-              <datalist id="conduit-font-presets">
+              <datalist id="ptyloom-font-presets">
                 {FONT_PRESETS.map((f) => (
                   <option key={f} value={f} />
                 ))}
