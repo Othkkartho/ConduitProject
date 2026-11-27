@@ -1,11 +1,11 @@
 use bytes::Bytes;
-use conduit_core::SessionManager;
-use conduit_protocol::{
+use ptyloom_core::SessionManager;
+use ptyloom_protocol::{
     AppSettings, BookmarkExportBundle, BookmarkImportRequest, BookmarkImportResult, BookmarkTree,
     BookmarkUpsertRequest, Folder, MasterPasswordStatus, SessionConfig, SessionId, SftpEntry,
     SshAuth, TerminalSize, TreeReorderRequest,
 };
-use conduit_storage::StorageRepository;
+use ptyloom_storage::StorageRepository;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tauri::ipc::{Channel, InvokeResponseBody};

@@ -1,20 +1,20 @@
 [package]
-name = "conduit-desktop"
+name = "ptyloom-desktop"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 
 [lib]
-name = "conduit_desktop_lib"
+name = "ptyloom_desktop_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
 tauri-build.workspace = true
 
 [dependencies]
-conduit-protocol.workspace = true
-conduit-core.workspace = true
-conduit-storage.workspace = true
+ptyloom-protocol.workspace = true
+ptyloom-core.workspace = true
+ptyloom-storage.workspace = true
 tauri.workspace = true
 tokio.workspace = true
 bytes.workspace = true

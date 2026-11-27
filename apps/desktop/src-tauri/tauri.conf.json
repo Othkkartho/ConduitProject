@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Conduit Terminal",
+  "productName": "Ptyloom Terminal",
   "version": "0.3.0",
-  "identifier": "dev.conduit.terminal",
+  "identifier": "dev.ptyloom.terminal",
   "build": {
     "beforeBuildCommand": "npm --prefix ../../../frontend run build",
     "frontendDist": "../../../frontend/dist"
@@ -11,7 +11,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Conduit — Multi-Protocol Terminal",
+        "title": "Ptyloom — Multi-Protocol Terminal",
         "width": 1320,
         "height": 860,
         "minWidth": 900,

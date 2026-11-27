@@ -1,5 +1,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    conduit_desktop_lib::run();
+    ptyloom_desktop_lib::run();
 }

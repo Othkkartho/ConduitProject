@@ -8,12 +8,12 @@ use std::os::windows::process::CommandExt;
 use std::path::{Component, Path, PathBuf};
 use std::process::{Command, Stdio};
 
-const APP_IDENTIFIER: &str = "dev.conduit.terminal";
-const KEYRING_SERVICE: &str = "conduit-terminal";
+const APP_IDENTIFIER: &str = "dev.ptyloom.terminal";
+const KEYRING_SERVICE: &str = "ptyloom-terminal";
 const KEYRING_ACCOUNT: &str = "master-key";
 const CURRENT_VERSION: &str = env!("CARGO_PKG_VERSION");
 const RELEASES_LATEST_API: &str =
-    "https://api.github.com/repos/Othkkartho/ConduitProject/releases/latest";
+    "https://api.github.com/repos/Othkkartho/PtyloomProject/releases/latest";
 
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
 pub struct GithubAsset {
@@ -154,10 +154,10 @@ pub fn resolve_app_data_dir() -> Option<PathBuf> {
 pub fn remove_sqlite_and_data(app_data_dir: Option<&Path>, install_dir: Option<&Path>) -> Vec<String> {
     let mut errors = Vec::new();
     let db_files = [
-        "conduit.db",
-        "conduit.db-wal",
-        "conduit.db-shm",
-        ".conduit-master.key",
+        "ptyloom.db",
+        "ptyloom.db-wal",
+        "ptyloom.db-shm",
+        ".ptyloom-master.key",
     ];
 
     if let Some(dir) = install_dir {
@@ -246,11 +246,11 @@ pub fn is_safe_install_dir(dir: &Path) -> bool {
         }
     }
 
-    dir.join("conduit.exe").exists()
-        || dir.join("conduit-desktop.exe").exists()
-        || dir.join("conduit").exists()
-        || dir.join("Conduit Terminal.app").exists()
-        || lower_name.contains("conduit")
+    dir.join("ptyloom.exe").exists()
+        || dir.join("ptyloom-desktop.exe").exists()
+        || dir.join("ptyloom").exists()
+        || dir.join("Ptyloom Terminal.app").exists()
+        || lower_name.contains("ptyloom")
 }
 
 pub fn find_extracted_package_root(extract_dir: &Path) -> PathBuf {
@@ -368,7 +368,7 @@ fn http_get_text(url: &str) -> Result<String, String> {
             "-H",
             "Accept: application/vnd.github+json",
             "-H",
-            "User-Agent: conduit-manager",
+            "User-Agent: ptyloom-manager",
             url,
         ])
         .output()
@@ -384,7 +384,7 @@ fn http_get_text(url: &str) -> Result<String, String> {
         let escaped = url.replace('\'', "''");
         let ps = format!(
             "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; \
-             (Invoke-RestMethod -Uri '{escaped}' -Headers @{{'User-Agent'='conduit-manager';'Accept'='application/vnd.github+json'}} | ConvertTo-Json -Depth 12)"
+             (Invoke-RestMethod -Uri '{escaped}' -Headers @{{'User-Agent'='ptyloom-manager';'Accept'='application/vnd.github+json'}} | ConvertTo-Json -Depth 12)"
         );
         let output = Command::new("powershell.exe")
             .args(["-NoProfile", "-Command", &ps])
@@ -406,7 +406,7 @@ fn http_get_text(url: &str) -> Result<String, String> {
             .args([
                 "-qO-",
                 "--header=Accept: application/vnd.github+json",
-                "--header=User-Agent: conduit-manager",
+                "--header=User-Agent: ptyloom-manager",
                 url,
             ])
             .output()
@@ -434,7 +434,7 @@ fn http_download_file(url: &str, dest: &Path) -> Result<(), String> {
             "-fsSL",
             "-L",
             "-H",
-            "User-Agent: conduit-manager",
+            "User-Agent: ptyloom-manager",
             "-o",
             &dest.to_string_lossy(),
             url,
@@ -452,7 +452,7 @@ fn http_download_file(url: &str, dest: &Path) -> Result<(), String> {
         let d = dest.to_string_lossy().replace('\'', "''");
         let ps = format!(
             "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; \
-             Invoke-WebRequest -Uri '{u}' -OutFile '{d}' -Headers @{{'User-Agent'='conduit-manager'}}"
+             Invoke-WebRequest -Uri '{u}' -OutFile '{d}' -Headers @{{'User-Agent'='ptyloom-manager'}}"
         );
         let output = Command::new("powershell.exe")
             .args(["-NoProfile", "-Command", &ps])
@@ -470,7 +470,7 @@ fn http_download_file(url: &str, dest: &Path) -> Result<(), String> {
     #[cfg(not(target_os = "windows"))]
     {
         let output = Command::new("wget")
-            .args(["-q", "--user-agent=conduit-manager", "-O", &dest.to_string_lossy(), url])
+            .args(["-q", "--user-agent=ptyloom-manager", "-O", &dest.to_string_lossy(), url])
             .output()
             .map_err(|e| format!("다운로드 실행 실패 (curl/wget): {e}"))?;
         if output.status.success() {
@@ -561,11 +561,11 @@ fn extract_archive(archive: &Path, dest: &Path) -> Result<(), String> {
     Err(format!("지원하지 않는 아카이브 형식입니다: {}", archive.display()))
 }
 
-fn kill_running_conduit() {
+fn kill_running_ptyloom() {
     #[cfg(target_os = "windows")]
     {
         const CREATE_NO_WINDOW: u32 = 0x08000000;
-        for exe in ["conduit.exe", "conduit-desktop.exe"] {
+        for exe in ["ptyloom.exe", "ptyloom-desktop.exe"] {
             let _ = Command::new("taskkill")
                 .args(["/F", "/IM", exe])
                 .creation_flags(CREATE_NO_WINDOW)
@@ -576,7 +576,7 @@ fn kill_running_conduit() {
     }
     #[cfg(not(target_os = "windows"))]
     {
-        for name in ["conduit-desktop", "conduit"] {
+        for name in ["ptyloom-desktop", "ptyloom"] {
             let _ = Command::new("pkill")
                 .args(["-x", name])
                 .stdout(Stdio::null())
@@ -677,7 +677,7 @@ fn run_update(install_dir: &Path, exe_path: &Path) -> Result<(), String> {
     })?;
 
     println!("다운로드 대상: {}", asset.name);
-    let temp_root = std::env::temp_dir().join(format!("conduit_update_{}", std::process::id()));
+    let temp_root = std::env::temp_dir().join(format!("ptyloom_update_{}", std::process::id()));
     let _ = fs::remove_dir_all(&temp_root);
     fs::create_dir_all(&temp_root)
         .map_err(|e| format!("임시 폴더 생성 실패: {e}"))?;
@@ -691,8 +691,8 @@ fn run_update(install_dir: &Path, exe_path: &Path) -> Result<(), String> {
         extract_archive(&archive_path, &extract_dir)?;
 
         let pkg_root = find_extracted_package_root(&extract_dir);
-        println!("실행 중인 Conduit 프로세스를 정리하고 파일을 교체합니다...");
-        kill_running_conduit();
+        println!("실행 중인 Ptyloom 프로세스를 정리하고 파일을 교체합니다...");
+        kill_running_ptyloom();
 
         let old_self = apply_update_from_dir(&pkg_root, install_dir, Some(exe_path))?;
         if let Some(old_path) = old_self {
@@ -717,17 +717,17 @@ fn run_uninstall(install_dir: &Path, exe_path: &Path, app_data_dir: Option<&Path
     println!("\n[삭제 경고]");
     println!("- SQLite DB 및 설정: {data_desc}");
     println!("- 설치 폴더: {}", install_dir.display());
-    println!("실행 중인 Conduit이 강제 종료되며, 저장된 모든 북마크와 자격 증명이 영구 삭제됩니다.");
+    println!("실행 중인 Ptyloom이 강제 종료되며, 저장된 모든 북마크와 자격 증명이 영구 삭제됩니다.");
 
-    let answer = read_line_trimmed("\n정말로 Conduit을 완전히 삭제하시겠습니까? (y/N): ")
+    let answer = read_line_trimmed("\n정말로 Ptyloom을 완전히 삭제하시겠습니까? (y/N): ")
         .map_err(|e| format!("입력 읽기 실패: {e}"))?;
     if !is_confirm_yes(&answer) {
         println!("삭제를 취소했습니다.");
         return Ok(());
     }
 
-    println!("\nConduit 프로세스 종료 및 데이터를 삭제하는 중입니다...");
-    kill_running_conduit();
+    println!("\nPtyloom 프로세스 종료 및 데이터를 삭제하는 중입니다...");
+    kill_running_ptyloom();
     delete_keyring_master_key();
 
     let errors = remove_sqlite_and_data(app_data_dir, Some(install_dir));
@@ -744,9 +744,9 @@ fn run_uninstall(install_dir: &Path, exe_path: &Path, app_data_dir: Option<&Path
         spawn_self_delete_folder(install_dir);
     } else {
         for fname in [
-            "conduit.exe",
-            "conduit-desktop.exe",
-            "conduit",
+            "ptyloom.exe",
+            "ptyloom-desktop.exe",
+            "ptyloom",
             "uninstall.exe",
             "README.md",
             "LICENSE",
@@ -756,11 +756,11 @@ fn run_uninstall(install_dir: &Path, exe_path: &Path, app_data_dir: Option<&Path
                 let _ = fs::remove_file(p);
             }
         }
-        let app_bundle = install_dir.join("Conduit Terminal.app");
+        let app_bundle = install_dir.join("Ptyloom Terminal.app");
         if app_bundle.exists() {
             let _ = fs::remove_dir_all(app_bundle);
         }
-        println!("SQLite DB 및 Conduit 실행 파일 삭제를 완료했습니다.");
+        println!("SQLite DB 및 Ptyloom 실행 파일 삭제를 완료했습니다.");
         println!("현재 폴더는 공용 폴더일 수 있어 안전을 위해 유지하고 manager 실행 파일만 제거합니다.");
         wait_enter();
         spawn_self_delete_file(exe_path);
@@ -799,7 +799,7 @@ fn main() {
     }
 
     println!("========================================");
-    println!("  Conduit Manager (v{CURRENT_VERSION})");
+    println!("  Ptyloom Manager (v{CURRENT_VERSION})");
     println!("========================================");
     println!("설치 폴더: {}", install_dir.display());
     if let Some(ref data_dir) = app_data_dir {
@@ -807,7 +807,7 @@ fn main() {
     }
     println!();
     println!("1. 업데이트 (GitHub Releases 최신 버전 확인 및 파일 교체)");
-    println!("2. 삭제 (Conduit 앱, SQLite DB 및 설정 완전 제거)");
+    println!("2. 삭제 (Ptyloom 앱, SQLite DB 및 설정 완전 제거)");
     println!("0. 종료");
 
     match read_line_trimmed("\n원하는 작업 번호를 입력하세요 [1/2/0]: ") {
@@ -842,7 +842,7 @@ mod tests {
 
     fn test_temp_dir(label: &str) -> PathBuf {
         let dir = std::env::temp_dir().join(format!(
-            "conduit_mgr_{label}_{}_{:?}",
+            "ptyloom_mgr_{label}_{}_{:?}",
             std::process::id(),
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -866,34 +866,34 @@ mod tests {
     fn select_release_asset_matches_os_and_arch() {
         let assets = vec![
             GithubAsset {
-                name: "conduit-v0.4.0-windows-x86_64.zip".into(),
+                name: "ptyloom-v0.4.0-windows-x86_64.zip".into(),
                 browser_download_url: "https://example.com/win.zip".into(),
             },
             GithubAsset {
-                name: "conduit-v0.4.0-macos-arm64.tar.gz".into(),
+                name: "ptyloom-v0.4.0-macos-arm64.tar.gz".into(),
                 browser_download_url: "https://example.com/mac.tar.gz".into(),
             },
             GithubAsset {
-                name: "conduit-v0.4.0-macos-arm64.zip".into(),
+                name: "ptyloom-v0.4.0-macos-arm64.zip".into(),
                 browser_download_url: "https://example.com/mac.zip".into(),
             },
             GithubAsset {
-                name: "conduit-v0.4.0-linux-x86_64.tar.gz".into(),
+                name: "ptyloom-v0.4.0-linux-x86_64.tar.gz".into(),
                 browser_download_url: "https://example.com/linux.tar.gz".into(),
             },
         ];
 
         assert_eq!(
             select_release_asset(&assets, "windows", "x86_64").unwrap().name,
-            "conduit-v0.4.0-windows-x86_64.zip"
+            "ptyloom-v0.4.0-windows-x86_64.zip"
         );
         assert_eq!(
             select_release_asset(&assets, "macos", "aarch64").unwrap().name,
-            "conduit-v0.4.0-macos-arm64.tar.gz"
+            "ptyloom-v0.4.0-macos-arm64.tar.gz"
         );
         assert_eq!(
             select_release_asset(&assets, "linux", "x86_64").unwrap().name,
-            "conduit-v0.4.0-linux-x86_64.tar.gz"
+            "ptyloom-v0.4.0-linux-x86_64.tar.gz"
         );
     }
 
@@ -910,9 +910,9 @@ mod tests {
     #[test]
     fn find_extracted_package_root_unwraps_single_subdir() {
         let dir = test_temp_dir("unwrap");
-        let nested = dir.join("conduit-v0.4.0-linux-x86_64");
+        let nested = dir.join("ptyloom-v0.4.0-linux-x86_64");
         fs::create_dir_all(&nested).unwrap();
-        fs::write(nested.join("conduit"), b"bin").unwrap();
+        fs::write(nested.join("ptyloom"), b"bin").unwrap();
 
         assert_eq!(find_extracted_package_root(&dir), nested);
 
@@ -927,39 +927,39 @@ mod tests {
         let base = test_temp_dir("apply_update");
         let pkg = base.join("pkg");
         let install = base.join("install");
-        fs::create_dir_all(pkg.join("Conduit Terminal.app/Contents/MacOS")).unwrap();
-        fs::create_dir_all(install.join("Conduit Terminal.app/Contents/MacOS")).unwrap();
+        fs::create_dir_all(pkg.join("Ptyloom Terminal.app/Contents/MacOS")).unwrap();
+        fs::create_dir_all(install.join("Ptyloom Terminal.app/Contents/MacOS")).unwrap();
 
-        fs::write(pkg.join("conduit"), b"new-bin").unwrap();
+        fs::write(pkg.join("ptyloom"), b"new-bin").unwrap();
         fs::write(
-            pkg.join("Conduit Terminal.app/Contents/MacOS/conduit-desktop"),
+            pkg.join("Ptyloom Terminal.app/Contents/MacOS/ptyloom-desktop"),
             b"new-app",
         )
         .unwrap();
-        fs::write(install.join("conduit"), b"old-bin").unwrap();
+        fs::write(install.join("ptyloom"), b"old-bin").unwrap();
         fs::write(
-            install.join("Conduit Terminal.app/Contents/MacOS/conduit-desktop"),
+            install.join("Ptyloom Terminal.app/Contents/MacOS/ptyloom-desktop"),
             b"old-app",
         )
         .unwrap();
 
         let mgr_src = pkg.join(if cfg!(target_os = "windows") {
-            "conduit-manager.exe"
+            "ptyloom-manager.exe"
         } else {
-            "conduit-manager"
+            "ptyloom-manager"
         });
         let mgr_dst = install.join(if cfg!(target_os = "windows") {
-            "conduit-manager.exe"
+            "ptyloom-manager.exe"
         } else {
-            "conduit-manager"
+            "ptyloom-manager"
         });
         fs::write(&mgr_src, b"new-mgr").unwrap();
         fs::write(&mgr_dst, b"old-mgr").unwrap();
 
         let old_self = apply_update_from_dir(&pkg, &install, Some(&mgr_dst)).unwrap();
-        assert_eq!(fs::read(install.join("conduit")).unwrap(), b"new-bin");
+        assert_eq!(fs::read(install.join("ptyloom")).unwrap(), b"new-bin");
         assert_eq!(
-            fs::read(install.join("Conduit Terminal.app/Contents/MacOS/conduit-desktop")).unwrap(),
+            fs::read(install.join("Ptyloom Terminal.app/Contents/MacOS/ptyloom-desktop")).unwrap(),
             b"new-app"
         );
         assert_eq!(fs::read(&mgr_dst).unwrap(), b"new-mgr");
@@ -981,10 +981,10 @@ mod tests {
 
         let desktop_dir = PathBuf::from("Users").join("Alice").join("Desktop");
         let program_files_dir = PathBuf::from("System").join("Program Files");
-        let safe_install_dir = PathBuf::from("Apps").join("conduit-v0.3.0-windows-x86_64");
+        let safe_install_dir = PathBuf::from("Apps").join("ptyloom-v0.3.0-windows-x86_64");
 
         assert!(!is_safe_install_dir(root_path));
-        assert!(!is_safe_install_dir(Path::new("conduit")));
+        assert!(!is_safe_install_dir(Path::new("ptyloom")));
         assert!(!is_safe_install_dir(&desktop_dir));
         assert!(!is_safe_install_dir(&program_files_dir));
         assert!(is_safe_install_dir(&safe_install_dir));
@@ -994,18 +994,18 @@ mod tests {
     fn remove_sqlite_and_data_cleans_all_db_artifacts() {
         let base = test_temp_dir("cleanup");
         let data_dir = base.join("appdata").join(APP_IDENTIFIER);
-        let install_dir = base.join("conduit-v0.3.0-windows-x86_64");
+        let install_dir = base.join("ptyloom-v0.3.0-windows-x86_64");
         fs::create_dir_all(&data_dir).unwrap();
         fs::create_dir_all(&install_dir).unwrap();
-        fs::write(data_dir.join("conduit.db"), b"db").unwrap();
-        fs::write(data_dir.join("conduit.db-wal"), b"wal").unwrap();
-        fs::write(data_dir.join(".conduit-master.key"), b"key").unwrap();
-        fs::write(install_dir.join("conduit.db"), b"local").unwrap();
+        fs::write(data_dir.join("ptyloom.db"), b"db").unwrap();
+        fs::write(data_dir.join("ptyloom.db-wal"), b"wal").unwrap();
+        fs::write(data_dir.join(".ptyloom-master.key"), b"key").unwrap();
+        fs::write(install_dir.join("ptyloom.db"), b"local").unwrap();
 
         let errs = remove_sqlite_and_data(Some(&data_dir), Some(&install_dir));
         assert!(errs.is_empty(), "Unexpected errors: {errs:?}");
         assert!(!data_dir.exists());
-        assert!(!install_dir.join("conduit.db").exists());
+        assert!(!install_dir.join("ptyloom.db").exists());
 
         let _ = fs::remove_dir_all(&base);
     }
