@@ -1,7 +1,7 @@
-# Contributing to Conduit
+# Contributing to Ptyloom
 
-Thank you for your interest in contributing to **Conduit**!  
-Whether you are reporting a bug, suggesting a feature, improving documentation, or submitting a pull request, your contributions help make Conduit better for everyone.
+Thank you for your interest in contributing to **Ptyloom**!  
+Whether you are reporting a bug, suggesting a feature, improving documentation, or submitting a pull request, your contributions help make Ptyloom better for everyone.
 
 Please take a moment to review these guidelines before making your first contribution.
 
@@ -41,7 +41,7 @@ All contributors and maintainers are expected to abide by our [Code of Conduct](
 Before opening a new issue, please search existing issues to check whether the problem or suggestion has already been reported.
 
 - **Bug Reports (`[BUG]`)**: Use the [Bug Report template](.github/ISSUE_TEMPLATE/bug_report.md).
-  - Include your OS/architecture (Windows / macOS / Linux), Conduit version, protocol involved (`Local PTY`, `SSH`, `SFTP`, `Serial`, `Telnet`), reproduction steps, expected vs. actual behavior, and error logs.
+  - Include your OS/architecture (Windows / macOS / Linux), Ptyloom version, protocol involved (`Local PTY`, `SSH`, `SFTP`, `Serial`, `Telnet`), reproduction steps, expected vs. actual behavior, and error logs.
   - **Important**: Always redact passwords, passphrases, private keys, and sensitive hostnames before attaching logs or screenshots.
 - **Feature Requests (`[FEAT]`)**: Use the [Feature Request template](.github/ISSUE_TEMPLATE/feature_request.md).
   - Clearly describe the motivation, proposed solution, alternatives considered, and acceptance criteria.
@@ -72,7 +72,7 @@ Before opening a new issue, please search existing issues to check whether the p
 
 ### Local Build & Run
 
-`conduit-desktop` embeds desktop icons and the built static assets from `frontend/dist`, so build those before launching the Rust desktop app:
+`ptyloom-desktop` embeds desktop icons and the built static assets from `frontend/dist`, so build those before launching the Rust desktop app:
 
 ```bash
 # 1. Generate Tauri desktop icons from the workspace root
@@ -85,10 +85,10 @@ npm run build
 cd ..
 
 # 3. Launch the Tauri v2 desktop application
-cargo run -p conduit-desktop
+cargo run -p ptyloom-desktop
 
 # (Optional) Launch the cross-platform update/uninstall CLI manager
-cargo run -p conduit-manager
+cargo run -p ptyloom-manager
 ```
 
 ---
@@ -96,7 +96,7 @@ cargo run -p conduit-manager
 ## 4. Workspace Structure
 
 ```text
-conduit/
+ptyloom/
 ├── Cargo.toml                  # Cargo workspace root and shared version
 ├── .github/
 │   ├── ISSUE_TEMPLATE/         # Bug report and feature request templates
@@ -107,9 +107,9 @@ conduit/
 ├── scripts/
 │   └── generate-icons.mjs      # Generates desktop icons for Tauri
 ├── crates/
-│   ├── conduit-protocol/       # Shared DTOs, session, bookmark, SFTP & settings models
-│   ├── conduit-core/           # SessionManager, Adaptive Coalescer, PTY/SSH/SFTP/Serial/Telnet, encoding
-│   └── conduit-storage/        # SQLite persistence, Envelope Encryption vault, Master Password auth
+│   ├── ptyloom-protocol/       # Shared DTOs, session, bookmark, SFTP & settings models
+│   ├── ptyloom-core/           # SessionManager, Adaptive Coalescer, PTY/SSH/SFTP/Serial/Telnet, encoding
+│   └── ptyloom-storage/        # SQLite persistence, Envelope Encryption vault, Master Password auth
 ├── apps/
 │   ├── desktop/                # Tauri v2 desktop host, native menus, and binary IPC channels
 │   └── manager/                # Cross-platform CLI manager (update & uninstall)
@@ -182,7 +182,7 @@ Format every commit message as `<type>(<optional scope>): <description>`:
 
 ## 8. Versioning & Release Policy
 
-- Conduit follows [Semantic Versioning 2.0.0 (SemVer)](https://semver.org/) (`MAJOR.MINOR.PATCH`):
+- Ptyloom follows [Semantic Versioning 2.0.0 (SemVer)](https://semver.org/) (`MAJOR.MINOR.PATCH`):
   - **`MAJOR`**: Incremented **only when explicitly requested by the project owner**, even for breaking changes.
   - **`MINOR`**: Backward-compatible feature additions.
   - **`PATCH`**: Bug fixes, refactoring, or documentation updates.
@@ -197,4 +197,4 @@ Format every commit message as `<type>(<optional scope>): <description>`:
 
 ## 9. License
 
-By contributing to Conduit, you agree that your contributions will be licensed under the [MIT License](LICENSE).
+By contributing to Ptyloom, you agree that your contributions will be licensed under the [MIT License](LICENSE).

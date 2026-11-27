@@ -4,16 +4,16 @@
 
 데스크톱 터미널 매니저는 수십~수백 개의 SSH 비밀번호와 개인키 패스프레이즈를 저장합니다. 각 항목마다 OS 키체인(`keyring`)을 직접 호출하면 OS에 따라 반복적인 권한 승인 팝업이 뜨거나 키체인 크기 제한에 걸릴 수 있습니다.
 
-Conduit은 이를 해결하기 위해 **Envelope Encryption(봉투 암호화)** 아키텍처를 채택합니다.
+Ptyloom은 이를 해결하기 위해 **Envelope Encryption(봉투 암호화)** 아키텍처를 채택합니다.
 
 1. **Master Key (KEK)**: OS 기본 키체인(Windows Credential Manager / macOS Keychain / Linux Secret Service)에 **256-bit 마스터 키 단 1개**만 저장합니다.
 2. **Data Encryption**: 모든 비밀번호·패스프레이즈는 고유한 96-bit 랜덤 Nonce와 함께 `AES-256-GCM`으로 암호화한 뒤 SQLite `secrets` 테이블에 저장합니다.
 3. **Memory Hygiene**: 복호화된 평문 버퍼와 마스터 키는 `zeroize::Zeroize`를 통해 스코프 종료 시 메모리에서 즉시 덮어씁니다.
-4. **Headless / Sandbox Fallback**: CI 테스트나 OS 데몬 키체인이 없는 샌드박스 환경에서 실행할 경우, 로컬 키 파일(`.conduit-master.key`, Unix `0600` 권한)로 안전하게 폴백합니다.
+4. **Headless / Sandbox Fallback**: CI 테스트나 OS 데몬 키체인이 없는 샌드박스 환경에서 실행할 경우, 로컬 키 파일(`.ptyloom-master.key`, Unix `0600` 권한)로 안전하게 폴백합니다.
 
 ---
 
-## 2. SQLite 스키마 (`conduit-storage`)
+## 2. SQLite 스키마 (`ptyloom-storage`)
 
 ```sql
 -- 1. 계층형 폴더 트리

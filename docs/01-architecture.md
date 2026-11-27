@@ -2,7 +2,7 @@
 
 ## 1. 설계 목표
 
-Conduit은 **단일 Rust 코어 엔진(`conduit-core`)** 과 **React/TypeScript 프론트엔드(`frontend`)** 를 결합한 **Tauri v2 네이티브 데스크톱 터미널 에뮬레이터(Windows, macOS, Linux)** 입니다. 네이티브 메뉴 바, OS 키체인 통합, Zero-JSON Binary IPC 채널을 기본 제공합니다.
+Ptyloom은 **단일 Rust 코어 엔진(`ptyloom-core`)** 과 **React/TypeScript 프론트엔드(`frontend`)** 를 결합한 **Tauri v2 네이티브 데스크톱 터미널 에뮬레이터(Windows, macOS, Linux)** 입니다. 네이티브 메뉴 바, OS 키체인 통합, Zero-JSON Binary IPC 채널을 기본 제공합니다.
 
 ---
 
@@ -22,13 +22,13 @@ flowchart TB
     end
 
     subgraph Hosts["Desktop Host Layer (apps/desktop/)"]
-        TauriHost["conduit-desktop (Tauri v2 Commands + Native Menu)"]
+        TauriHost["ptyloom-desktop (Tauri v2 Commands + Native Menu)"]
     end
 
     subgraph Core["Domain & Engine Layer (crates/)"]
-        Proto["conduit-protocol"]
-        CoreEngine["conduit-core"]
-        Storage["conduit-storage"]
+        Proto["ptyloom-protocol"]
+        CoreEngine["ptyloom-core"]
+        Storage["ptyloom-storage"]
 
         subgraph Backends["Protocol Backends"]
             Pty["PtyBackend (portable-pty)"]
@@ -54,10 +54,10 @@ flowchart TB
 
 | 크레이트 | 역할 | 주요 의존성 |
 |---|---|---|
-| `conduit-protocol` | 전 계층 공용 DTO(`SessionConfig`, `Bookmark`, `AppSettings`, `SftpEntry`) | `serde` |
-| `conduit-core` | `SessionManager`, `SessionBackend` 트레이트, `Adaptive Coalescer` & `FlowController`, 5종 프로토콜 백엔드 구현 | `tokio`, `portable-pty`, `russh`, `russh-sftp`, `tokio-serial`, `dashmap` |
-| `conduit-storage` | SQLite 기반 폴더/북마크/설정/`known_hosts` 저장소 및 OS Keyring + AES-256-GCM 보안 볼트 | `rusqlite`, `keyring`, `aes-gcm`, `zeroize` |
-| `conduit-desktop` | Tauri v2 윈도우, 네이티브 메뉴(`보기`, `도움말 -> 사용자 매뉴얼`), Tauri IPC 커맨드 및 Binary Channel 바인딩 | `tauri`, `conduit-core`, `conduit-storage` |
+| `ptyloom-protocol` | 전 계층 공용 DTO(`SessionConfig`, `Bookmark`, `AppSettings`, `SftpEntry`) | `serde` |
+| `ptyloom-core` | `SessionManager`, `SessionBackend` 트레이트, `Adaptive Coalescer` & `FlowController`, 5종 프로토콜 백엔드 구현 | `tokio`, `portable-pty`, `russh`, `russh-sftp`, `tokio-serial`, `dashmap` |
+| `ptyloom-storage` | SQLite 기반 폴더/북마크/설정/`known_hosts` 저장소 및 OS Keyring + AES-256-GCM 보안 볼트 | `rusqlite`, `keyring`, `aes-gcm`, `zeroize` |
+| `ptyloom-desktop` | Tauri v2 윈도우, 네이티브 메뉴(`보기`, `도움말 -> 사용자 매뉴얼`), Tauri IPC 커맨드 및 Binary Channel 바인딩 | `tauri`, `ptyloom-core`, `ptyloom-storage` |
 
 ---
 
