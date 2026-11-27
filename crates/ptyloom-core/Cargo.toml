@@ -1,11 +1,11 @@
 [package]
-name = "conduit-core"
+name = "ptyloom-core"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 
 [dependencies]
-conduit-protocol.workspace = true
+ptyloom-protocol.workspace = true
 tokio.workspace = true
 async-trait.workspace = true
 bytes.workspace = true

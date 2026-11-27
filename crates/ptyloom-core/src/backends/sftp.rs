@@ -1,5 +1,5 @@
 use crate::backend::SessionError;
-use conduit_protocol::SftpEntry;
+use ptyloom_protocol::SftpEntry;
 use russh_sftp::client::SftpSession;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 

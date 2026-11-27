@@ -1,7 +1,7 @@
 use crate::vault::{SecretVault, VaultError};
 use base64::{engine::general_purpose::STANDARD as B64, Engine};
 use chrono::Utc;
-use conduit_protocol::{
+use ptyloom_protocol::{
     AppSettings, Bookmark, BookmarkExportBundle, BookmarkImportRequest, BookmarkImportResult,
     BookmarkTree, ExportedBookmark, Folder, ImportMode, MasterPasswordStatus, SerialConfig,
     SessionConfig, SshAuth, TelnetConfig, TerminalSize, TreeReorderRequest,
@@ -65,8 +65,8 @@ impl StorageRepository {
         let fallback_key = db_path
             .parent()
             .unwrap_or_else(|| Path::new("."))
-            .join(".conduit-master.key");
-        let vault = SecretVault::open("conduit-terminal", "master-key", &fallback_key)?;
+            .join(".ptyloom-master.key");
+        let vault = SecretVault::open("ptyloom-terminal", "master-key", &fallback_key)?;
         let repo = Self {
             conn: Mutex::new(conn),
             vault,
@@ -955,7 +955,7 @@ mod tests {
 
     #[test]
     fn reorder_tree_moves_and_rejects_cycles() {
-        use conduit_protocol::{BookmarkPosition, FolderPosition};
+        use ptyloom_protocol::{BookmarkPosition, FolderPosition};
 
         let repo = StorageRepository::open_in_memory().unwrap();
         repo.upsert_folder(&Folder {

@@ -1,7 +1,7 @@
 use crate::backend::{SessionBackend, SessionError};
 use async_trait::async_trait;
 use bytes::Bytes;
-use conduit_protocol::TerminalSize;
+use ptyloom_protocol::TerminalSize;
 use portable_pty::{native_pty_system, ChildKiller, CommandBuilder, MasterPty, PtySize};
 use std::io::{Read, Write};
 use std::sync::Mutex;
@@ -67,7 +67,7 @@ impl PtyBackend {
 
         // Dedicated OS threads prevent blocking PTY reads from stalling Tokio runtime shutdown (notably on macOS).
         std::thread::Builder::new()
-            .name("conduit-pty-reader".into())
+            .name("ptyloom-pty-reader".into())
             .spawn(move || {
                 let mut buf = [0u8; 8192];
                 loop {
@@ -88,7 +88,7 @@ impl PtyBackend {
 
         let (input_tx, mut input_rx) = mpsc::channel::<Bytes>(256);
         std::thread::Builder::new()
-            .name("conduit-pty-writer".into())
+            .name("ptyloom-pty-writer".into())
             .spawn(move || {
                 while let Some(data) = input_rx.blocking_recv() {
                     if writer.write_all(&data).is_err() || writer.flush().is_err() {
@@ -155,10 +155,10 @@ mod tests {
         let (shell, script) = if cfg!(windows) {
             (
                 Some("cmd.exe".to_string()),
-                &b"echo conduit_pty_ok\r\nexit\r\n"[..],
+                &b"echo ptyloom_pty_ok\r\nexit\r\n"[..],
             )
         } else {
-            (Some("/bin/sh".to_string()), &b"echo conduit_pty_ok\nexit\n"[..])
+            (Some("/bin/sh".to_string()), &b"echo ptyloom_pty_ok\nexit\n"[..])
         };
 
         let pty = PtyBackend::spawn(shell, None, TerminalSize { cols: 80, rows: 24 }, tx)
@@ -172,7 +172,7 @@ mod tests {
             match tokio::time::timeout(std::time::Duration::from_millis(500), rx.recv()).await {
                 Ok(Some(chunk)) => {
                     collected.extend_from_slice(&chunk);
-                    if String::from_utf8_lossy(&collected).contains("conduit_pty_ok") {
+                    if String::from_utf8_lossy(&collected).contains("ptyloom_pty_ok") {
                         break;
                     }
                 }
@@ -185,7 +185,7 @@ mod tests {
 
         let output = String::from_utf8_lossy(&collected);
         assert!(
-            output.contains("conduit_pty_ok"),
+            output.contains("ptyloom_pty_ok"),
             "Expected PTY output to contain marker, got: {output}"
         );
     }

@@ -1,7 +1,7 @@
 use crate::backend::{SessionBackend, SessionError};
 use async_trait::async_trait;
 use bytes::{BufMut, Bytes, BytesMut};
-use conduit_protocol::{TelnetConfig, TerminalSize};
+use ptyloom_protocol::{TelnetConfig, TerminalSize};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 use tokio::sync::mpsc;

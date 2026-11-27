@@ -9,7 +9,7 @@ use crate::backends::{
 use crate::encoding::{encode_input, resolve_encoding, StreamDecoder};
 use crate::stream::{run_output_pump, FlowController};
 use bytes::Bytes;
-use conduit_protocol::{SessionConfig, SessionId, SessionInfo, SftpEntry, TerminalSize};
+use ptyloom_protocol::{SessionConfig, SessionId, SessionInfo, SftpEntry, TerminalSize};
 use dashmap::DashMap;
 use encoding_rs::Encoding;
 use std::sync::atomic::{AtomicU32, Ordering};

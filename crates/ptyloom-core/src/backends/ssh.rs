@@ -2,7 +2,7 @@ use crate::backend::{SessionBackend, SessionError};
 use crate::backends::sftp::SftpClient;
 use async_trait::async_trait;
 use bytes::Bytes;
-use conduit_protocol::{SshAuth, TerminalSize};
+use ptyloom_protocol::{SshAuth, TerminalSize};
 use russh::{client, ChannelMsg};
 use russh_sftp::client::SftpSession;
 use std::sync::Arc;

@@ -1,7 +1,7 @@
 use crate::backends::sftp::SftpClient;
 use async_trait::async_trait;
 use bytes::Bytes;
-use conduit_protocol::TerminalSize;
+use ptyloom_protocol::TerminalSize;
 use std::sync::Arc;
 use thiserror::Error;
 
